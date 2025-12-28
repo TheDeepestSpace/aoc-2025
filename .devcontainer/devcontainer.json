@@ -1,0 +1,26 @@
+{
+  "name": "aoc-devcontainer",
+  "dockerFile": "Dockerfile",
+  "remoteUser": "dev",
+  "postStartCommand": "bash -c '.devcontainer/scripts/post-start.sh ${containerWorkspaceFolder}'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "zsh",
+            "args": [
+              "-l"
+            ]
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      },
+      "extensions": [
+        "mshr-h.VerilogHDL",
+        "dalance.svls-vscode",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  }
+}
