@@ -19,7 +19,8 @@
       "extensions": [
         "mshr-h.VerilogHDL",
         "dalance.svls-vscode",
-        "tamasfe.even-better-toml"
+        "tamasfe.even-better-toml",
+        "lramseyer.vaporview"
       ]
     }
   }

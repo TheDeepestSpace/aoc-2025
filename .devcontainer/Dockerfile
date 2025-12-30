@@ -54,10 +54,10 @@ RUN sudo apt update && \
     autoconf && ./configure && make -j `nproc` && sudo make install && \
     cd .. && rm -rf verilator
 
-# install cocotb
+# install pythong testing libraries
 USER dev
 RUN sudo apt update && sudo apt install -y python3 python3-pip libpython3-dev && \
-  pip3 install cocotb~=1.9
+  pip3 install cocotb~=1.9 cocotb-test pytest
 
 # install svlint
 USER dev
