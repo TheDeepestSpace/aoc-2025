@@ -57,7 +57,7 @@ RUN sudo apt update && \
 # install pythong testing libraries
 USER dev
 RUN sudo apt update && sudo apt install -y python3 python3-pip libpython3-dev && \
-  pip3 install cocotb~=1.9 cocotb-test pytest
+  pip3 install cocotb~=1.9 cocotb-test cocotbext-axi pytest
 
 # install svlint
 USER dev
