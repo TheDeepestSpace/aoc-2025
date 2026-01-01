@@ -54,6 +54,7 @@ async def rref_matrices(dut):
     dut.rst_n.value = 0
     dut.u_rref_2x3.start.value = 0
     dut.u_rref_3x4.start.value = 0
+    dut.u_rref_4x7.start.value = 0
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
     dut.rst_n.value = 1
@@ -116,6 +117,22 @@ async def rref_matrices(dut):
             ],
         },
     ]
+    cases_4x7 = [
+        {
+            "matrix": [
+              [0, 0, 0, 0, 1, 1, 0],
+              [0, 1, 0, 0, 0, 1, 1],
+              [0, 0, 1, 1, 1, 0, 1],
+              [1, 1, 0, 1, 0, 0, 0],
+            ],
+            "expected": [
+              [1, 0, 0, 1, 0, 1, 1],
+              [0, 1, 0, 0, 0, 1, 1],
+              [0, 0, 1, 1, 0, 1, 1],
+              [0, 0, 0, 0, 1, 1, 0],
+            ],
+        },
+    ]
 
     for case in cases_2x3:
         await run_case(
@@ -136,6 +153,18 @@ async def rref_matrices(dut):
             dut.aug_3x4,
             dut.ready_3x4,
             dut.u_rref_3x4.aug,
+            case["matrix"],
+            case["expected"],
+        )
+        await RisingEdge(dut.clk)
+
+    for case in cases_4x7:
+        await run_case(
+            dut.clk,
+            dut.start_4x7,
+            dut.aug_4x7,
+            dut.ready_4x7,
+            dut.u_rref_4x7.aug,
             case["matrix"],
             case["expected"],
         )

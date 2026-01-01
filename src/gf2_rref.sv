@@ -44,10 +44,14 @@ module gf2_rref
         else if (i == pivot_row_idx)     aug[i] <= aug[col_iter_as_row_iter];
         else                             aug[i] <= aug[i];
       else if (state_now == STATE__ZERO_OUT_COL)
-        if (i == col_iter_as_row_iter)   aug[i] <= aug[i];
-        else if (aug[i][col_iter] == 0)  aug[i] <= aug[i];
-        else                             aug[i] <= aug[i] ^ aug[col_iter_as_row_iter];
-      else                               aug[i] <= aug[i];
+        if (i == (col_iter_as_row_iter_valid ? col_iter_as_row_iter : row_iter))
+          aug[i] <= aug[i];
+        else if (aug[i][col_iter] == 0)
+          aug[i] <= aug[i];
+        else
+          aug[i] <= aug[i] ^ aug[col_iter_as_row_iter_valid ? col_iter_as_row_iter : row_iter];
+      else
+          aug[i] <= aug[i];
 
     always_ff @ (posedge clk)
       if (rst_n && state_now == STATE__DONE) RREF[i] <= aug[i];
@@ -72,19 +76,38 @@ module gf2_rref
 
   localparam int unsigned ROWS_W = (ROWS <= 1) ? 1 : $clog2(ROWS);
   logic [ROWS_W -1:0] row_iter;
+  logic [ROWS_W -1:0] row_iter_start;
+  logic               row_iter_start_valid;
   logic [ROWS_W -1:0] pivot_row_idx;
   logic [ROWS_W -1:0] col_iter_as_row_iter;
+  logic               col_iter_as_row_iter_valid;
 
   logic pivot_found;
   assign pivot_found = aug[row_iter][col_iter];
   assign col_iter_as_row_iter = ROWS_W'(COLS -1 - col_iter);
+  assign col_iter_as_row_iter_valid = COLS -1 - 32'(col_iter) < ROWS;
+
+  always_ff @ (posedge clk)
+    if (!rst_n) {row_iter_start, row_iter_start_valid} <= {{ROWS_W{1'b0}}, 1'b1};
+    else
+      case (state_now)
+        STATE__INIT: {row_iter_start, row_iter_start_valid} <= {{ROWS_W{1'b0}}, 1'b1};
+        STATE__FIND_PIVOT:
+          if (pivot_found)
+            if (row_iter_start_valid)
+              {row_iter_start, row_iter_start_valid} <=
+                {row_iter_start + 1'b1, (row_iter_start + 1'b1 != {ROWS_W{1'b0}})};
+            else {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
+          else {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
+        default: {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
+      endcase
 
   always_ff @ (posedge clk)
     if (!rst_n) row_iter <= '0;
     else
       case (state_now)
         STATE__INIT:                             row_iter <= '0;
-        STATE__UPDATE_COL_ITER:                  row_iter <= col_iter_as_row_iter + 1'b1;
+        STATE__UPDATE_COL_ITER:                  row_iter <= row_iter_start;
         STATE__FIND_PIVOT:
           if (pivot_found)                       row_iter <= row_iter;
           else if (row_iter == ROWS_W'(ROWS -1)) row_iter <= row_iter;
@@ -109,21 +132,23 @@ module gf2_rref
   always_comb
     case (state_now)
       STATE__INIT:
-        if (start)                              state_next = STATE__FIND_PIVOT;
-        else                                    state_next = STATE__INIT;
+        if (start)                                   state_next = STATE__FIND_PIVOT;
+        else                                         state_next = STATE__INIT;
       STATE__FIND_PIVOT:
-        if (pivot_found)
-          if (row_iter != col_iter_as_row_iter) state_next = STATE__SWAP;
-          else                                  state_next = STATE__ZERO_OUT_COL;
-        else if (row_iter == ROWS_W'(ROWS -1))  state_next = STATE__UPDATE_COL_ITER;
-        else                                    state_next = STATE__FIND_PIVOT;
+        if (!row_iter_start_valid)                   state_next = STATE__UPDATE_COL_ITER;
+        else if (pivot_found)
+          if (!col_iter_as_row_iter_valid)           state_next = STATE__ZERO_OUT_COL;
+          else if (row_iter == col_iter_as_row_iter) state_next = STATE__ZERO_OUT_COL;
+          else                                       state_next = STATE__SWAP;
+        else if (row_iter == ROWS_W'(ROWS -1))       state_next = STATE__UPDATE_COL_ITER;
+        else                                         state_next = STATE__FIND_PIVOT;
       STATE__UPDATE_COL_ITER:
-        if (col_iter == 1)                      state_next = STATE__DONE;
-        else                                    state_next = STATE__FIND_PIVOT;
-      STATE__SWAP:                              state_next = STATE__ZERO_OUT_COL;
-      STATE__ZERO_OUT_COL:                      state_next = STATE__UPDATE_COL_ITER;
-      STATE__DONE:                              state_next = STATE__INIT;
-      default:                                  state_next = STATE__INIT;
+        if (col_iter == 1)                           state_next = STATE__DONE;
+        else                                         state_next = STATE__FIND_PIVOT;
+      STATE__SWAP:                                   state_next = STATE__ZERO_OUT_COL;
+      STATE__ZERO_OUT_COL:                           state_next = STATE__UPDATE_COL_ITER;
+      STATE__DONE:                                   state_next = STATE__INIT;
+      default:                                       state_next = STATE__INIT;
     endcase
 
 endmodule
