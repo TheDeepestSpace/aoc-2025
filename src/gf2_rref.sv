@@ -132,23 +132,23 @@ module gf2_rref
   always_comb
     case (state_now)
       STATE__INIT:
-        if (start)                                   state_next = STATE__FIND_PIVOT;
-        else                                         state_next = STATE__INIT;
+        if (start)                             state_next = STATE__FIND_PIVOT;
+        else                                   state_next = STATE__INIT;
       STATE__FIND_PIVOT:
-        if (!row_iter_start_valid)                   state_next = STATE__UPDATE_COL_ITER;
+        if (!row_iter_start_valid)             state_next = STATE__UPDATE_COL_ITER;
         else if (pivot_found)
-          if (!col_iter_as_row_iter_valid)           state_next = STATE__ZERO_OUT_COL;
-          else if (row_iter == col_iter_as_row_iter) state_next = STATE__ZERO_OUT_COL;
-          else                                       state_next = STATE__SWAP;
-        else if (row_iter == ROWS_W'(ROWS -1))       state_next = STATE__UPDATE_COL_ITER;
-        else                                         state_next = STATE__FIND_PIVOT;
+          if (!col_iter_as_row_iter_valid)     state_next = STATE__ZERO_OUT_COL;
+          else if (row_iter == row_iter_start) state_next = STATE__ZERO_OUT_COL;
+          else                                 state_next = STATE__SWAP;
+        else if (row_iter == ROWS_W'(ROWS -1)) state_next = STATE__UPDATE_COL_ITER;
+        else                                   state_next = STATE__FIND_PIVOT;
       STATE__UPDATE_COL_ITER:
-        if (col_iter == 1)                           state_next = STATE__DONE;
-        else                                         state_next = STATE__FIND_PIVOT;
-      STATE__SWAP:                                   state_next = STATE__ZERO_OUT_COL;
-      STATE__ZERO_OUT_COL:                           state_next = STATE__UPDATE_COL_ITER;
-      STATE__DONE:                                   state_next = STATE__INIT;
-      default:                                       state_next = STATE__INIT;
+        if (col_iter == 1)                     state_next = STATE__DONE;
+        else                                   state_next = STATE__FIND_PIVOT;
+      STATE__SWAP:                             state_next = STATE__ZERO_OUT_COL;
+      STATE__ZERO_OUT_COL:                     state_next = STATE__UPDATE_COL_ITER;
+      STATE__DONE:                             state_next = STATE__INIT;
+      default:                                 state_next = STATE__INIT;
     endcase
 
 endmodule
