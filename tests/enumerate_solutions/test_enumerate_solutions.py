@@ -26,10 +26,13 @@ def frame_to_int(frame):
 
 
 async def collect_solutions(sink, count):
-    solutions = []
-    for _ in range(count):
-        frame = await with_timeout(sink.recv(), 5, "us")
-        solutions.append(frame_to_int(frame))
+    frame = await with_timeout(sink.recv(), 5, "us")
+    if isinstance(frame.tdata, (bytes, bytearray)):
+        solutions = list(frame.tdata)
+    else:
+        solutions = list(frame.tdata)
+    if len(solutions) != count:
+        raise AssertionError(f"solution count mismatch: expected {count}, got {len(solutions)}")
     return solutions
 
 
@@ -41,6 +44,7 @@ async def enumerate_solutions_vectors(dut):
     dut.rst_n.value = 0
     dut.start_2x3.value = 0
     dut.start_3x4.value = 0
+    dut.start_4x7.value = 0
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
     dut.rst_n.value = 1
@@ -114,3 +118,37 @@ async def enumerate_solutions_vectors(dut):
         received_bits = [unpack_word(word, 3) for word in received]
         if received_bits != expected:
             raise AssertionError(f"3x4 mismatch: expected {expected}, got {received_bits}")
+
+    bus_4x7 = AxiStreamBus.from_prefix(dut, "sol4x7")
+    sink_4x7 = AxiStreamSink(bus_4x7, dut.clk, dut.rst_n, reset_active_level=False)
+    rref_4x7_cases = [
+        {
+            "rref": [
+                [1, 0, 0, 1, 0, 1, 1],
+                [0, 1, 0, 0, 0, 1, 1],
+                [0, 0, 1, 1, 0, 1, 1],
+                [0, 0, 0, 0, 1, 1, 0],
+            ],
+            "expected": [
+                [1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 1, 1],
+                [0, 1, 0, 1, 0, 0],
+                [1, 0, 1, 1, 1, 1],
+            ],
+        },
+    ]
+
+    for case in rref_4x7_cases:
+        for r in range(4):
+            dut.rref_4x7[r].value = pack_row(case["rref"][r])
+        dut.start_4x7.value = 0
+        await RisingEdge(dut.clk)
+        dut.start_4x7.value = 1
+        await RisingEdge(dut.clk)
+        dut.start_4x7.value = 0
+
+        expected = case["expected"]
+        received = await collect_solutions(sink_4x7, len(expected))
+        received_bits = [unpack_word(word, 6) for word in received]
+        if sorted(received_bits) != sorted(expected):
+            raise AssertionError(f"4x7 mismatch: expected {expected}, got {received_bits}")

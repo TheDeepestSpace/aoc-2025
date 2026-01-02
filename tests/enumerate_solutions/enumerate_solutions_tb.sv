@@ -20,8 +20,16 @@ module enumerate_solutions_tb;
   logic [7:0] sol3x4_tdata;
   logic       sol3x4_tlast;
 
+  logic       start_4x7;
+  logic [6:0] rref_4x7 [3:0];
+  logic       sol4x7_tvalid;
+  logic       sol4x7_tready;
+  logic [7:0] sol4x7_tdata;
+  logic       sol4x7_tlast;
+
   axi_stream_if #( .DATA_WIDTH( 8 ) ) solution_stream_2x3();
   axi_stream_if #( .DATA_WIDTH( 8 ) ) solution_stream_3x4();
+  axi_stream_if #( .DATA_WIDTH( 8 ) ) solution_stream_4x7();
 
   assign sol2x3_tvalid = solution_stream_2x3.tvalid;
   assign sol2x3_tdata  = solution_stream_2x3.tdata;
@@ -32,6 +40,11 @@ module enumerate_solutions_tb;
   assign sol3x4_tdata  = solution_stream_3x4.tdata;
   assign sol3x4_tlast  = solution_stream_3x4.tlast;
   assign solution_stream_3x4.tready = sol3x4_tready;
+
+  assign sol4x7_tvalid = solution_stream_4x7.tvalid;
+  assign sol4x7_tdata  = solution_stream_4x7.tdata;
+  assign sol4x7_tlast  = solution_stream_4x7.tlast;
+  assign solution_stream_4x7.tready = sol4x7_tready;
 
   enumerate_solutions #( .ROWS( 2 ), .COLS( 3 ) ) u_enum_2x3
     ( .clk             ( clk                 )
@@ -47,5 +60,13 @@ module enumerate_solutions_tb;
     , .start           ( start_3x4           )
     , .RREF            ( rref_3x4            )
     , .solution_stream ( solution_stream_3x4 )
+    );
+
+  enumerate_solutions #( .ROWS( 4 ), .COLS( 7 ) ) u_enum_4x7
+    ( .clk             ( clk                 )
+    , .rst_n           ( rst_n               )
+    , .start           ( start_4x7           )
+    , .RREF            ( rref_4x7            )
+    , .solution_stream ( solution_stream_4x7 )
     );
 endmodule
