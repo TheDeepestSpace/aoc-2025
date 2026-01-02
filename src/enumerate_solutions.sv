@@ -88,11 +88,17 @@ module enumerate_solutions #( parameter int ROWS, parameter int COLS )
   // determine base solution
 
   logic [VARS_COUNT -1:0]  x0;
+  logic [ROWS -1:0]        x0_rows [VARS_COUNT -1:0];
 
-  for (genvar i = 0; i < ROWS_VARS; i++) begin: l_build_base_solution
-    always_comb
-      if (free_vars_mask[VARS_COUNT -1 - i]) x0[VARS_COUNT -1 - i] = 0;
-      else                                   x0[VARS_COUNT -1 - i] = RREF[i][0];
+  for (genvar c = VARS_COUNT -1; c >= 0; c--) begin: l_build_vase_solution_cols
+    for (genvar r = 0; r < ROWS_VARS; r++) begin: l_build_base_solution_rows
+      always_comb
+        if (pivot_valid[r] && pivot_col[r] == VARS_INDEX_W'(VARS_COUNT -1 - c))
+          x0_rows[c][r] = RREF[r][0];
+        else
+          x0_rows[c][r] = 1'b0;
+    end
+    always_comb x0[c] = |x0_rows[c];
   end
 
   // determine free variable bases
