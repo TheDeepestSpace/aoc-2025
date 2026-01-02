@@ -3,8 +3,10 @@
 module gf2_rref
   #(parameter int unsigned MAX_ROWS
   , parameter int unsigned MAX_COLS
-  , parameter int unsigned MAX_ROWS_W = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS + 1)
-  , parameter int unsigned MAX_COLS_W = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS + 1)
+  , parameter int unsigned MAX_ROWS_W     = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS + 1)
+  , parameter int unsigned MAX_COLS_W     = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS + 1)
+  , parameter int unsigned MAX_ROWS_IDX_W = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS)
+  , parameter int unsigned MAX_COLS_IDX_W = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS)
   )
   ( input  var logic clk
   , input  var logic rst_n
@@ -68,14 +70,14 @@ module gf2_rref
 
   // column iterator
 
-  logic [MAX_COLS_W -1:0] col_iter;
-  logic [MAX_COLS_W -1:0] col_rhs_idx;
+  logic [MAX_COLS_IDX_W -1:0] col_iter;
+  logic [MAX_COLS_IDX_W -1:0] col_rhs_idx;
 
   always_ff @ (posedge clk)
-    if (!rst_n)                 col_iter <= MAX_COLS_W'(MAX_COLS -1);
+    if (!rst_n)                 col_iter <= MAX_COLS_IDX_W'(MAX_COLS -1);
     else
       case (state_now)
-        STATE__INIT:            col_iter <= MAX_COLS_W'(MAX_COLS -1);
+        STATE__INIT:            col_iter <= MAX_COLS_IDX_W'(MAX_COLS -1);
         STATE__UPDATE_COL_ITER: col_iter <= col_iter - 1'b1;
         default:                col_iter <= col_iter;
       endcase
@@ -84,28 +86,31 @@ module gf2_rref
 
   // pivot checks
 
-  logic [MAX_ROWS_W -1:0] row_iter;
-  logic [MAX_ROWS_W -1:0] row_iter_start;
-  logic                   row_iter_start_valid;
-  logic [MAX_ROWS_W -1:0] pivot_row_idx;
-  logic [MAX_ROWS_W -1:0] col_iter_as_row_iter;
-  logic                   col_iter_as_row_iter_valid;
+  logic [MAX_ROWS_IDX_W -1:0] row_iter;
+  logic [MAX_ROWS_IDX_W -1:0] row_iter_start;
+  logic [MAX_ROWS_IDX_W -1:0] row_iter_end;
+  logic                       row_iter_start_valid;
+  logic [MAX_ROWS_IDX_W -1:0] pivot_row_idx;
+  logic [MAX_ROWS_IDX_W -1:0] col_iter_as_row_iter;
+  logic                       col_iter_as_row_iter_valid;
 
   logic pivot_found;
   assign pivot_found = aug[row_iter][col_iter];
-  assign col_iter_as_row_iter = MAX_ROWS_W'(MAX_COLS -1 - col_iter);
+  assign col_iter_as_row_iter = MAX_ROWS_IDX_W'(MAX_COLS -1 - col_iter);
   assign col_iter_as_row_iter_valid = MAX_COLS -1 - 32'(col_iter) < rows;
 
+  always_comb row_iter_end = MAX_ROWS_IDX_W'(rows - 1);
+
   always_ff @ (posedge clk)
-    if (!rst_n) {row_iter_start, row_iter_start_valid} <= {{MAX_ROWS_W{1'b0}}, 1'b1};
+    if (!rst_n) {row_iter_start, row_iter_start_valid} <= {{MAX_ROWS_IDX_W{1'b0}}, 1'b1};
     else
       case (state_now)
-        STATE__INIT: {row_iter_start, row_iter_start_valid} <= {{MAX_ROWS_W{1'b0}}, 1'b1};
+        STATE__INIT: {row_iter_start, row_iter_start_valid} <= {{MAX_ROWS_IDX_W{1'b0}}, 1'b1};
         STATE__FIND_PIVOT:
           if (pivot_found)
             if (row_iter_start_valid)
               {row_iter_start, row_iter_start_valid} <=
-                {row_iter_start + 1'b1, row_iter_start == rows -1};
+                {row_iter_start + 1'b1, MAX_ROWS_W'(row_iter_start) + 1'b1 != rows};
             else {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
           else {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
         default: {row_iter_start, row_iter_start_valid} <= {row_iter_start, row_iter_start_valid};
@@ -115,13 +120,13 @@ module gf2_rref
     if (!rst_n) row_iter <= '0;
     else
       case (state_now)
-        STATE__INIT:                    row_iter <= '0;
-        STATE__UPDATE_COL_ITER:         row_iter <= row_iter_start;
+        STATE__INIT:                         row_iter <= '0;
+        STATE__UPDATE_COL_ITER:              row_iter <= row_iter_start;
         STATE__FIND_PIVOT:
-          if (pivot_found)              row_iter <= row_iter;
-          else if (row_iter == rows -1) row_iter <= row_iter;
-          else                          row_iter <= row_iter + 1'b1;
-        default:                        row_iter <= row_iter;
+          if (pivot_found)                   row_iter <= row_iter;
+          else if (row_iter == row_iter_end) row_iter <= row_iter;
+          else                               row_iter <= row_iter + 1'b1;
+        default:                             row_iter <= row_iter;
       endcase
 
   always_ff @ (posedge clk)
@@ -149,7 +154,7 @@ module gf2_rref
           if (!col_iter_as_row_iter_valid)     state_next = STATE__ZERO_OUT_COL;
           else if (row_iter == row_iter_start) state_next = STATE__ZERO_OUT_COL;
           else                                 state_next = STATE__SWAP;
-        else if (row_iter == rows -1)          state_next = STATE__UPDATE_COL_ITER;
+        else if (row_iter == row_iter_end)     state_next = STATE__UPDATE_COL_ITER;
         else                                   state_next = STATE__FIND_PIVOT;
       STATE__UPDATE_COL_ITER:
         if (col_iter == col_rhs_idx)           state_next = STATE__DONE;
