@@ -1,3 +1,6 @@
+`ifndef AXI_STREAM_IF__HG
+`define AXI_STREAM_IF__HG
+
 interface axi_stream_if #( parameter int DATA_WIDTH = 8 );
 
   logic                   tvalid;
@@ -22,3 +25,5 @@ interface axi_stream_if #( parameter int DATA_WIDTH = 8 );
     );
 
 endinterface
+
+`endif
