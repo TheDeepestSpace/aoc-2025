@@ -1,15 +1,22 @@
 `default_nettype none
 
-module popcount #(parameter int N, parameter int W = (N <= 1) ? 1 : $clog2(N +1) )
-  ( input  var logic [N -1:0] in
-  , output var logic [W -1:0] count
+module popcount
+  #(parameter int unsigned MAX_N
+  , parameter int unsigned MAX_W   = (MAX_N <= 1) ? 1 : $clog2(MAX_N + 1)
+  , parameter int unsigned MAX_N_W = (MAX_N <= 1) ? 1 : $clog2(MAX_N + 1)
+  )
+  ( input  var logic [MAX_N -1:0]   in
+  , input  var logic [MAX_N_W -1:0] n
+  , output var logic [MAX_W -1:0]   count
   );
 
-  logic [W -1:0] chain [N:0];
-  popcount_chain #( .N ( N ), .W ( W ) ) u_popcount_chain
+  logic [MAX_W -1:0] chain [MAX_N:0];
+  popcount_chain #( .MAX_N ( MAX_N ), .MAX_W ( MAX_W ) ) u_popcount_chain
     ( .in    ( in    )
+    , .n     ( n     )
     , .chain ( chain )
     );
-  assign count = chain[N];
+
+  always_comb count = chain[n];
 
 endmodule

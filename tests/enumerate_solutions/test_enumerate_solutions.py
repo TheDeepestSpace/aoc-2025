@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, with_timeout
@@ -25,6 +27,15 @@ def frame_to_int(frame):
     return int(tdata)
 
 
+@dataclass(frozen=True)
+class EnumCase:
+    rows: int
+    cols: int
+    rref: list[list[int]]
+    expected: list[list[int]]
+    unordered: bool = False
+
+
 async def collect_solutions(sink, count):
     frame = await with_timeout(sink.recv(), 5, "us")
     if isinstance(frame.tdata, (bytes, bytearray)):
@@ -36,119 +47,115 @@ async def collect_solutions(sink, count):
     return solutions
 
 
+async def run_case(dut, sink, case, max_rows, max_cols):
+    rows = case.rows
+    cols = case.cols
+    rref = case.rref
+    expected = case.expected
+
+    if rows != len(rref) or cols != len(rref[0]):
+        raise AssertionError("Case dimensions do not match rref shape")
+
+    dut.rows.value = rows
+    dut.cols.value = cols
+
+    for r in range(max_rows):
+        dut.rref[r].value = 0
+
+    for r in range(rows):
+        row_bits = rref[r] + ([0] * (max_cols - cols))
+        dut.rref[r].value = pack_row(row_bits)
+
+    dut.start.value = 0
+    await RisingEdge(dut.clk)
+    dut.start.value = 1
+    await RisingEdge(dut.clk)
+    dut.start.value = 0
+
+    vars_count = cols - 1
+    received = await collect_solutions(sink, len(expected))
+    received_bits = [unpack_word(word, 8)[:vars_count] for word in received]
+    if case.unordered:
+        if sorted(received_bits) != sorted(expected):
+            raise AssertionError(f"mismatch: expected {expected}, got {received_bits}")
+    else:
+        if received_bits != expected:
+            raise AssertionError(f"mismatch: expected {expected}, got {received_bits}")
+
+
 @cocotb.test()
 async def enumerate_solutions_vectors(dut):
+    max_rows = 4
+    max_cols = 7
+
     clock = Clock(dut.clk, 10, units="ns")
     cocotb.start_soon(clock.start())
 
     dut.rst_n.value = 0
-    dut.start_2x3.value = 0
-    dut.start_3x4.value = 0
-    dut.start_4x7.value = 0
+    dut.start.value = 0
+    dut.rows.value = 0
+    dut.cols.value = 0
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
     dut.rst_n.value = 1
 
-    bus_2x3 = AxiStreamBus.from_prefix(dut, "sol2x3")
-    sink_2x3 = AxiStreamSink(bus_2x3, dut.clk, dut.rst_n, reset_active_level=False)
-    rref_2x3_cases = [
-        {
-            "rref": [
+    bus = AxiStreamBus.from_prefix(dut, "sol")
+    sink = AxiStreamSink(bus, dut.clk, dut.rst_n, reset_active_level=False)
+    cases = [
+        EnumCase(
+            rows=2,
+            cols=3,
+            rref=[
                 [1, 0, 1],
                 [0, 1, 0],
             ],
-            "expected": [
+            expected=[
                 [1, 0],
             ],
-        },
-        {
-            "rref": [
+        ),
+        EnumCase(
+            rows=2,
+            cols=3,
+            rref=[
                 [1, 1, 0],
                 [0, 0, 0],
             ],
-            "expected": [
+            expected=[
                 [0, 0],
                 [1, 1],
             ],
-        },
-    ]
-
-    for case in rref_2x3_cases:
-        for r in range(2):
-            dut.rref_2x3[r].value = pack_row(case["rref"][r])
-        dut.start_2x3.value = 0
-        await RisingEdge(dut.clk)
-        dut.start_2x3.value = 1
-        await RisingEdge(dut.clk)
-        dut.start_2x3.value = 0
-
-        expected = case["expected"]
-        received = await collect_solutions(sink_2x3, len(expected))
-        received_bits = [unpack_word(word, 2) for word in received]
-        if received_bits != expected:
-            raise AssertionError(f"2x3 mismatch: expected {expected}, got {received_bits}")
-
-    bus_3x4 = AxiStreamBus.from_prefix(dut, "sol3x4")
-    sink_3x4 = AxiStreamSink(bus_3x4, dut.clk, dut.rst_n, reset_active_level=False)
-    rref_3x4_cases = [
-        {
-            "rref": [
+        ),
+        EnumCase(
+            rows=3,
+            cols=4,
+            rref=[
                 [1, 0, 1, 0],
                 [0, 1, 1, 1],
                 [0, 0, 0, 0],
             ],
-            "expected": [
+            expected=[
                 [0, 1, 0],
                 [1, 0, 1],
             ],
-        },
-    ]
-
-    for case in rref_3x4_cases:
-        for r in range(3):
-            dut.rref_3x4[r].value = pack_row(case["rref"][r])
-        dut.start_3x4.value = 0
-        await RisingEdge(dut.clk)
-        dut.start_3x4.value = 1
-        await RisingEdge(dut.clk)
-        dut.start_3x4.value = 0
-
-        expected = case["expected"]
-        received = await collect_solutions(sink_3x4, len(expected))
-        received_bits = [unpack_word(word, 3) for word in received]
-        if received_bits != expected:
-            raise AssertionError(f"3x4 mismatch: expected {expected}, got {received_bits}")
-
-    bus_4x7 = AxiStreamBus.from_prefix(dut, "sol4x7")
-    sink_4x7 = AxiStreamSink(bus_4x7, dut.clk, dut.rst_n, reset_active_level=False)
-    rref_4x7_cases = [
-        {
-            "rref": [
+        ),
+        EnumCase(
+            rows=4,
+            cols=7,
+            rref=[
                 [1, 0, 0, 1, 0, 1, 1],
                 [0, 1, 0, 0, 0, 1, 1],
                 [0, 0, 1, 1, 0, 1, 1],
                 [0, 0, 0, 0, 1, 1, 0],
             ],
-            "expected": [
+            expected=[
                 [1, 1, 1, 0, 0, 0],
                 [0, 0, 0, 0, 1, 1],
                 [0, 1, 0, 1, 0, 0],
                 [1, 0, 1, 1, 1, 1],
             ],
-        },
+            unordered=True,
+        ),
     ]
 
-    for case in rref_4x7_cases:
-        for r in range(4):
-            dut.rref_4x7[r].value = pack_row(case["rref"][r])
-        dut.start_4x7.value = 0
-        await RisingEdge(dut.clk)
-        dut.start_4x7.value = 1
-        await RisingEdge(dut.clk)
-        dut.start_4x7.value = 0
-
-        expected = case["expected"]
-        received = await collect_solutions(sink_4x7, len(expected))
-        received_bits = [unpack_word(word, 6) for word in received]
-        if sorted(received_bits) != sorted(expected):
-            raise AssertionError(f"4x7 mismatch: expected {expected}, got {received_bits}")
+    for case in cases:
+        await run_case(dut, sink, case, max_rows, max_cols)

@@ -1,11 +1,19 @@
 `default_nettype none
 
-module enumerate_solutions #( parameter int ROWS, parameter int COLS )
+module enumerate_solutions
+  #(parameter int unsigned MAX_ROWS
+  , parameter int unsigned MAX_COLS
+  , parameter int unsigned MAX_ROWS_W = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS + 1)
+  , parameter int unsigned MAX_COLS_W = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS + 1)
+  )
   ( input var logic clk
   , input var logic rst_n
 
+  , input var logic [MAX_ROWS_W -1:0] rows
+  , input var logic [MAX_ROWS_W -1:0] cols
+
   , input var logic start
-  , input var logic [COLS -1:0] RREF [ROWS -1:0]
+  , input var logic [MAX_COLS -1:0] RREF [MAX_ROWS -1:0]
 
   // assume 8-bit tdata width
   , axi_stream_if.master solution_stream
@@ -29,125 +37,167 @@ module enumerate_solutions #( parameter int ROWS, parameter int COLS )
 
   // determine pivots
 
-  localparam int unsigned VARS_COUNT   = COLS -1;
-  localparam int unsigned VARS_COUNT_W = (VARS_COUNT <= 1) ? 1 : $clog2(VARS_COUNT + 1);
-  localparam int unsigned VARS_INDEX_W = (VARS_COUNT <= 1) ? 1 : $clog2(VARS_COUNT);
+  localparam int unsigned MAX_VARS_COUNT   = MAX_COLS -1;
+  localparam int unsigned MAX_VARS_COUNT_W = (MAX_VARS_COUNT <= 1) ? 1 : $clog2(MAX_VARS_COUNT + 1);
+  localparam int unsigned MAX_VARS_INDEX_W = (MAX_VARS_COUNT <= 1) ? 1 : $clog2(MAX_VARS_COUNT);
 
   // can optimize this by computing in gf2_rref and pass here
-  logic [ROWS -1:0]       row_pivots [VARS_COUNT -1:0];
-  logic [VARS_COUNT -1:0] pivot_mask;
+  logic [MAX_ROWS -1:0]       row_pivots [MAX_VARS_COUNT -1:0];
+  logic [MAX_VARS_COUNT -1:0] pivot_mask;
 
-  localparam int unsigned ROWS_VARS = (ROWS < VARS_COUNT) ? ROWS : VARS_COUNT;
+  localparam int unsigned MAX_ROWS_IDX_W = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS);
+  localparam int unsigned MAX_COLS_IDX_W = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS);
 
-  for (genvar r = 0; r < ROWS; r++) begin: l_pivot_scan_row
-    for (genvar c = VARS_COUNT -1; c >= 0; c--) begin: l_pivot_scan_col
-      if (c == VARS_COUNT -1) begin: l_leading_column_special_case
+  logic [MAX_COLS_IDX_W -1:0] col_rhs_idx;
+
+  always_comb col_rhs_idx = MAX_COLS_IDX_W'(MAX_COLS - cols);
+
+  localparam int unsigned MAX_ROWS_VARS = (MAX_ROWS < MAX_VARS_COUNT) ? MAX_ROWS : MAX_VARS_COUNT;
+
+  for (genvar r = 0; r < MAX_ROWS; r++) begin: l_pivot_scan_row
+    for (genvar c = MAX_VARS_COUNT -1; c > 0; c--) begin: l_pivot_scan_col
+      if (c == MAX_VARS_COUNT -1) begin: l_leading_column_special_case
         always_comb row_pivots[c][r] = RREF[r][c +1];
       end else begin: l_following_columns
-        always_comb row_pivots[c][r] = RREF[r][c +1] & ~(|RREF[r][VARS_COUNT:c +2]);
+        always_comb
+          if (c + 1 > col_rhs_idx && r < rows)
+            row_pivots[c][r] = RREF[r][c +1] & ~(|RREF[r][MAX_COLS -1:c +2]);
+          else
+            row_pivots[c][r] = 'x;
       end
     end
   end
 
-  for (genvar c = VARS_COUNT -1; c >= 0; c--) begin: l_build_pivot_mask
-    assign pivot_mask[c] = |row_pivots[c];
+  for (genvar c = MAX_VARS_COUNT -1; c > 0; c--) begin: l_build_pivot_mask
+    always_comb
+      if (c + 1 > col_rhs_idx)
+        pivot_mask[c] = |row_pivots[c];
+      else
+        pivot_mask[c] = 'x;
   end
 
   // map columns to pivot rows
 
-  logic                     pivot_valid [ROWS -1:0];
-  logic [VARS_INDEX_W -1:0] pivot_col   [ROWS -1:0];
+  logic                         pivot_valid [MAX_ROWS -1:0];
+  logic [MAX_VARS_INDEX_W -1:0] pivot_col   [MAX_ROWS -1:0];
 
-  for (genvar r = 0; r < ROWS; r++) begin: l_build_pivot_valid
-    assign pivot_valid[r] = |RREF[r][COLS -1:1];
+  logic [MAX_COLS -1:0] col_mask;
+  logic [MAX_COLS -1:0] col_mask_without_rhs;
+
+  logic [MAX_VARS_COUNT_W -1:0] vars;
+
+  assign col_mask             = {MAX_COLS{1'b1}} << col_rhs_idx;
+  assign col_mask_without_rhs = {MAX_COLS{1'b1}} << (col_rhs_idx + 1);
+
+  assign vars = cols - 1;
+
+  for (genvar r = 0; r < MAX_ROWS; r++) begin: l_build_pivot_valid
+    always_comb
+      if (r < rows)
+        pivot_valid[r] = |(RREF[r][MAX_COLS -1:0] & col_mask_without_rhs);
+      else
+        pivot_valid[r] = 'x;
   end
 
-  for (genvar r = 0; r < ROWS; r++) begin: l_build_pivot_col
-    logic [VARS_INDEX_W -1:0] pivot_col_chain [VARS_COUNT:0];
+  for (genvar r = 0; r < MAX_ROWS; r++) begin: l_build_pivot_col
+    logic [MAX_VARS_INDEX_W -1:0] pivot_col_chain [MAX_VARS_COUNT:0];
     assign pivot_col_chain[0] = '0;
-    for (genvar v = 0; v < VARS_COUNT; v++) begin: l_build_pivot_col_chain
+    for (genvar v = 0; v < MAX_VARS_COUNT; v++) begin: l_build_pivot_col_chain
       assign
         pivot_col_chain[v +1] =
-          row_pivots[VARS_COUNT -1 - v][r] ? VARS_INDEX_W'(v) : pivot_col_chain[v];
+          (v < vars && r < rows)
+            ? (row_pivots[MAX_VARS_COUNT -1 - v][r] ? MAX_VARS_INDEX_W'(v) : pivot_col_chain[v])
+            : pivot_col_chain[v];
     end
-    assign pivot_col[r] = pivot_col_chain[VARS_COUNT];
+    always_comb
+      if (r < rows)
+        pivot_col[r] = pivot_col_chain[vars];
+      else
+        pivot_col[r] = 'x;
   end
 
   // determine free variables
 
-  logic [VARS_COUNT -1:0]   free_vars_mask;
-  logic [VARS_COUNT_W -1:0] free_vars_count;
+  logic [MAX_VARS_COUNT -1:0]   free_vars_mask;
+  logic [MAX_VARS_COUNT_W -1:0] free_vars_count;
 
   assign free_vars_mask = ~pivot_mask;
 
-  popcount #( .N ( VARS_COUNT ), .W ( VARS_COUNT_W ) ) u_free_vars_popcount
-    ( .in    ( free_vars_mask  )
-    , .count ( free_vars_count )
+  popcount #( .MAX_N ( MAX_VARS_COUNT ), .MAX_W ( MAX_VARS_COUNT_W ) ) u_free_vars_popcount
+    ( .in    ( free_vars_mask   )
+    , .n     ( vars             )
+    , .count ( free_vars_count  )
     );
 
   // determine base solution
 
-  logic [VARS_COUNT -1:0]  x0;
-  logic [ROWS -1:0]        x0_rows [VARS_COUNT -1:0];
+  logic [MAX_VARS_COUNT -1:0]  x0;
+  logic [MAX_ROWS -1:0]        x0_rows [MAX_VARS_COUNT -1:0];
 
-  for (genvar c = VARS_COUNT -1; c >= 0; c--) begin: l_build_vase_solution_cols
-    for (genvar r = 0; r < ROWS_VARS; r++) begin: l_build_base_solution_rows
+  for (genvar c = MAX_VARS_COUNT -1; c >= 0; c--) begin: l_build_vase_solution_cols
+    for (genvar r = 0; r < MAX_ROWS_VARS; r++) begin: l_build_base_solution_rows
       always_comb
-        if (pivot_valid[r] && pivot_col[r] == VARS_INDEX_W'(VARS_COUNT -1 - c))
-          x0_rows[c][r] = RREF[r][0];
+        if (c + 1 > col_rhs_idx && r < rows)
+          if (pivot_valid[r] && pivot_col[r] == MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 - c))
+            x0_rows[c][r] = RREF[r][col_rhs_idx];
+          else
+            x0_rows[c][r] = 1'b0;
         else
-          x0_rows[c][r] = 1'b0;
+          x0_rows[c][r] = 'x;
     end
-    always_comb x0[c] = |x0_rows[c];
+    always_comb
+      if (c + 1 > col_rhs_idx)
+        x0[c] = |x0_rows[c];
+      else
+        x0[c] = 'x;
   end
 
   // determine free variable bases
 
-  logic [VARS_COUNT -1:0]   bases            [VARS_COUNT -1:0];
-  logic [VARS_INDEX_W -1:0] bases_iter_chain [VARS_COUNT:0];
+  logic [MAX_VARS_COUNT -1:0]   bases            [MAX_VARS_COUNT -1:0];
+  logic [MAX_VARS_INDEX_W -1:0] bases_iter_chain [MAX_VARS_COUNT:0];
 
-  popcount_chain #( .N ( VARS_COUNT ), .W ( VARS_INDEX_W ) ) u_bases_iter_chain
+  popcount_chain #( .MAX_N ( MAX_VARS_COUNT ), .MAX_W ( MAX_VARS_INDEX_W ) ) u_bases_iter_chain
     ( .in    ( free_vars_mask   )
+    , .n     ( vars             )
     , .chain ( bases_iter_chain )
     );
 
-  for (genvar c = VARS_COUNT - 1; c >= 0; c--) begin: l_build_bases_col
-    for (genvar r = 0; r < VARS_COUNT; r++) begin: l_build_bases_row
-      if (r < ROWS_VARS) begin: l_build_bases_from_concrete_rows
-        always_comb
-          if (state_now == STATE__INIT) bases[c][VARS_COUNT -1 - r] = '0;
+  for (genvar c = MAX_VARS_COUNT - 1; c >= 0; c--) begin: l_build_bases_col
+    for (genvar r = 0; r < MAX_VARS_COUNT; r++) begin: l_build_bases_row
+      always_comb
+        if (c + 1 > col_rhs_idx)
+          if (state_now == STATE__INIT) bases[c][MAX_VARS_COUNT -1 - r] = '0;
           else if (free_vars_mask[c] != '0)
-            if (r == VARS_COUNT -1 - c)
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] = 1'b1;
-            else if (pivot_valid[r])
+            if (r == MAX_VARS_COUNT -1 - c)
+              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = 1'b1;
+            /* verilator lint_off SELRANGE */
+            else if (r < rows && pivot_valid[r])
+            /* verilator lint_on SELRANGE */
               bases
-                [bases_iter_chain[VARS_COUNT -1 - c]]
-                  [VARS_INDEX_W'(VARS_COUNT -1 -pivot_col[r])] =
+                [bases_iter_chain[MAX_VARS_COUNT -1 - c]]
+                  /* verilator lint_off SELRANGE */
+                  [MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 -pivot_col[r])] =
                     RREF[r][c +1];
+                  /* verilator lint_on SELRANGE */
+            else if (r >= rows) /* implicit row condition */
+              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
+                bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
             else
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] = 1'b0;
+              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = 1'b0;
           else
-            bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] =
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r];
-      end else begin: l_build_bases_from_implied_rows
-        always_comb
-          if (state_now == STATE__INIT) bases[c][VARS_COUNT -1 - r] = '0;
-          else if (free_vars_mask[c] != '0)
-            if (r == VARS_COUNT -1 - c)
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] = 1'b1;
-            else
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] = 1'b0;
-          else
-            bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r] =
-              bases[bases_iter_chain[VARS_COUNT -1 - c]][VARS_COUNT -1 - r];
-      end
+            bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
+              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
+        else
+          bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
+            bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
     end
   end
 
   // solution iterator
 
-  logic [VARS_COUNT_W -1:0] free_vars_iterator_stop;
-  logic [VARS_COUNT_W -1:0] free_vars_iterator;
+  logic [MAX_VARS_COUNT_W -1:0] free_vars_iterator_stop;
+  logic [MAX_VARS_COUNT_W -1:0] free_vars_iterator;
 
   always_comb
     if (free_vars_count == 0) free_vars_iterator_stop = '0;
@@ -163,18 +213,22 @@ module enumerate_solutions #( parameter int ROWS, parameter int COLS )
 
   // next solution
 
-  logic [VARS_COUNT -1:0] xor_chain [VARS_COUNT_W:0];
+  logic [MAX_VARS_COUNT -1:0] xor_chain [MAX_VARS_COUNT_W:0];
 
   assign xor_chain[0] = x0;
-  for (genvar i = 0; i < VARS_COUNT_W; i++) begin: l_build_xor_chain
-    assign xor_chain[i + 1] = xor_chain[i] ^ ({VARS_COUNT{free_vars_iterator[i]}} & bases[i]);
+  for (genvar i = 0; i < MAX_VARS_COUNT_W; i++) begin: l_build_xor_chain
+    assign
+      xor_chain[i + 1] =
+        (i < vars)
+          ? (xor_chain[i] ^ ({MAX_VARS_COUNT{free_vars_iterator[i]}} & bases[i]))
+          : xor_chain[i];
   end
 
-  logic [VARS_COUNT -1:0] x_next;
+  logic [MAX_VARS_COUNT -1:0] x_next;
   always_comb
     case (state_now)
       STATE__FIND_BASE_SOLUTION: x_next = x0;
-      STATE__FIND_NEXT_SOLUTION: x_next = xor_chain[VARS_COUNT_W];
+      STATE__FIND_NEXT_SOLUTION: x_next = xor_chain[MAX_VARS_COUNT_W];
       default:                   x_next = x_next;
     endcase
 
@@ -185,13 +239,14 @@ module enumerate_solutions #( parameter int ROWS, parameter int COLS )
 
   // solution streaming
 
-  logic [solution_stream.DATA_WIDTH - VARS_COUNT - 1:0] t_data_padding = '0;
+  // currently only works for up to 8 variables
+  logic [solution_stream.DATA_WIDTH - MAX_VARS_COUNT - 1:0] t_data_padding = '0;
 
   always_comb
     case (state_now)
       STATE__FIND_BASE_SOLUTION, STATE__FIND_NEXT_SOLUTION:
         {solution_stream.tvalid, solution_stream.tdata, solution_stream.tlast} =
-          {1'b1, t_data_padding, x_next, (last_solution ? 1'b1 : 1'b0)};
+          {1'b1, x_next, t_data_padding, (last_solution ? 1'b1 : 1'b0)};
       default:
         {solution_stream.tvalid, solution_stream.tdata, solution_stream.tlast} =
           {1'b0, {solution_stream.DATA_WIDTH{1'b0}}, 1'b0};
@@ -222,6 +277,5 @@ module enumerate_solutions #( parameter int ROWS, parameter int COLS )
       STATE__DONE:                  state_next = STATE__INIT;
       default:                      state_next = STATE__INIT;
     endcase
-
 
 endmodule
