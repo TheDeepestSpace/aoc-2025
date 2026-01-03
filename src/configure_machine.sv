@@ -1,20 +1,26 @@
 `default_nettype none
 
 module configure_machine
-  #(parameter int NUM_LIGHTS
-  , parameter int NUM_BUTTONS
-  , parameter int NUM_PRESSES_W = NUM_BUTTONS <= 1 ? 1 : $clog2(NUM_BUTTONS + 1)
+  #(parameter int unsigned MAX_NUM_LIGHTS
+  , parameter int unsigned MAX_NUM_BUTTONS
+  , parameter int unsigned MAX_NUM_BUTTONS_W =
+      MAX_NUM_BUTTONS <= 1 ? 1 : $clog2(MAX_NUM_BUTTONS + 1)
+  , parameter int unsigned MAX_NUM_LIGHTS_W  = MAX_NUM_LIGHTS <= 1 ? 1 : $clog2(MAX_NUM_LIGHTS + 1)
+  , parameter int unsigned MAX_NUM_PRESSES_W = MAX_NUM_BUTTONS_W
   )
   ( input var logic clk
   , input var logic rst_n
 
-  , input var logic                   start
-  , input var logic [NUM_LIGHTS -1:0] buttons [NUM_BUTTONS -1:0]
-  , input var logic [NUM_LIGHTS -1:0] target_lights_arrangement
+  , input var logic [MAX_NUM_LIGHTS_W -1:0]  num_lights
+  , input var logic [MAX_NUM_BUTTONS_W -1:0] num_buttons
 
-  , output var logic                      ready
-  , output var logic [NUM_PRESSES_W -1:0] min_button_presses
-  , output var logic [NUM_BUTTONS -1:0]   buttons_to_press
+  , input var logic                       start
+  , input var logic [MAX_NUM_LIGHTS -1:0] buttons [MAX_NUM_BUTTONS -1:0]
+  , input var logic [MAX_NUM_LIGHTS -1:0] target_lights_arrangement
+
+  , output var logic                          ready
+  , output var logic [MAX_NUM_PRESSES_W -1:0] min_button_presses
+  , output var logic [MAX_NUM_BUTTONS -1:0]   buttons_to_press
   );
 
   // state declarations
@@ -35,37 +41,58 @@ module configure_machine
 
   // construct augmented matrix
 
-  localparam int unsigned AUG_MAT_ROWS = NUM_LIGHTS;
-  localparam int unsigned AUG_MAT_COLS = NUM_BUTTONS + 1;
-  logic [AUG_MAT_COLS -1:0] augmented_matrix [AUG_MAT_ROWS -1:0];
+  localparam int unsigned MAX_AUG_MAT_ROWS = MAX_NUM_LIGHTS;
+  localparam int unsigned MAX_AUG_MAT_COLS = MAX_NUM_BUTTONS + 1;
+  localparam int unsigned MAX_AUG_MAT_COLS_W =
+    MAX_AUG_MAT_COLS <= 1 ? 1 : $clog2(MAX_AUG_MAT_COLS + 1);
 
-  for (genvar r = 0; r < AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
-    for (genvar c = AUG_MAT_COLS -1; c >= 1; c--) begin: l_build_aug_mat_rows
-      always_comb augmented_matrix[r][c] = buttons[AUG_MAT_COLS -1 - c][r];
+  logic [MAX_AUG_MAT_COLS -1:0] augmented_matrix [MAX_AUG_MAT_ROWS -1:0];
+
+  for (genvar r = 0; r < MAX_AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
+    for (genvar c = MAX_AUG_MAT_COLS -1; c >= 1; c--) begin: l_build_aug_mat_rows
+      always_comb
+        if (r < num_lights && MAX_AUG_MAT_COLS -1 -c < num_buttons)
+          augmented_matrix[r][c] = buttons[MAX_AUG_MAT_COLS -1 - c][r];
+        else
+          augmented_matrix[r][c] = 'x;
     end
   end
 
-  for (genvar l = 0; l < AUG_MAT_ROWS; l++) begin: l_build_aug_mat_last_col
-    always_comb augmented_matrix[l][0] = target_lights_arrangement[l];
+  for (genvar l = 0; l < MAX_AUG_MAT_ROWS; l++) begin: l_build_aug_mat_last_col
+    always_comb
+      if (l < num_lights)
+        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - num_buttons)] =
+          target_lights_arrangement[l];
+      else
+        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - num_buttons)] = 'x;
   end
 
   // compute RREF
 
   logic rref_start, rref_ready;
-  logic [AUG_MAT_COLS -1:0] rref [AUG_MAT_ROWS -1:0];
+  logic [MAX_AUG_MAT_COLS -1:0] rref [MAX_AUG_MAT_ROWS -1:0];
 
   always_ff @ (posedge clk)
     if (state_now == STATE__START_COMPUTE_RREF) rref_start <= 1'b1;
     else                                        rref_start <= '0;
 
-  gf2_rref #( .ROWS ( AUG_MAT_ROWS ), .COLS ( AUG_MAT_COLS ) ) u_gf2_rref
-    ( .clk   ( clk              )
-    , .rst_n ( rst_n            )
-    , .start ( rref_start       )
-    , .AUG   ( augmented_matrix )
-    , .ready ( rref_ready       )
-    , .RREF  ( rref             )
-    );
+  gf2_rref
+    #(.MAX_ROWS ( MAX_AUG_MAT_ROWS )
+    , .MAX_COLS ( MAX_AUG_MAT_COLS )
+    )
+    u_gf2_rref
+      ( .clk   ( clk              )
+      , .rst_n ( rst_n            )
+
+      , .rows  ( num_lights       )
+      , .cols  ( num_buttons + 1  )
+
+      , .start ( rref_start       )
+      , .AUG   ( augmented_matrix )
+
+      , .ready ( rref_ready       )
+      , .RREF  ( rref             )
+      );
 
   // read off solutions
 
@@ -77,29 +104,51 @@ module configure_machine
     else if (state_now == STATE__READ_SOLUTION) enumerate_solutions_start <= 1'b1;
     else                                        enumerate_solutions_start <= '0;
 
-  enumerate_solutions #( .ROWS ( AUG_MAT_ROWS ), .COLS ( AUG_MAT_COLS ) ) u_enumerate_solutions
-    ( .clk             ( clk                       )
-    , .rst_n           ( rst_n                     )
-    , .start           ( enumerate_solutions_start )
-    , .RREF            ( rref                      )
-    , .solution_stream ( solution_stream.master    )
-    );
+  enumerate_solutions
+    #(.MAX_ROWS ( MAX_AUG_MAT_ROWS )
+    , .MAX_COLS ( MAX_AUG_MAT_COLS )
+    )
+    u_enumerate_solutions
+      ( .clk             ( clk                       )
+      , .rst_n           ( rst_n                     )
+
+      , .rows            ( num_lights                )
+      , .cols            ( num_buttons + 1           )
+
+      , .start           ( enumerate_solutions_start )
+      , .RREF            ( rref                      )
+
+      , .solution_stream ( solution_stream.master    )
+      );
 
   // track cheapest solution
 
-  logic [NUM_BUTTONS -1:0]   current_solution;
-  logic [NUM_PRESSES_W -1:0] current_solution_popcount;
+  logic [MAX_NUM_BUTTONS -1:0]   current_solution;
+  logic [MAX_NUM_PRESSES_W -1:0] current_solution_popcount;
 
-  always_comb current_solution = solution_stream.tdata[NUM_BUTTONS -1:0];
+  always_comb current_solution =
+    solution_stream.tdata
+      [ solution_stream.DATA_WIDTH -1
+      : solution_stream.DATA_WIDTH -1 - MAX_NUM_BUTTONS +1
+      ];
 
-  popcount #( .N ( NUM_BUTTONS ) ) u_solution_popcount
-    ( .in    ( current_solution          )
-    , .count ( current_solution_popcount )
-    );
+  popcount
+    #(.MAX_N ( MAX_NUM_BUTTONS   )
+    , .MAX_W ( MAX_NUM_PRESSES_W )
+    )
+    u_solution_popcount
+      ( .in    ( current_solution          )
+      , .n     ( num_buttons               )
+      , .count ( current_solution_popcount )
+      );
 
   always_ff @ (posedge clk)
     if (!rst_n)
-      {min_button_presses, buttons_to_press} <= {{NUM_PRESSES_W{1'b1}}, {NUM_BUTTONS{1'b0}}};
+      {min_button_presses, buttons_to_press} <=
+        {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
+    else if (state_now == STATE__INIT)
+      {min_button_presses, buttons_to_press} <=
+        {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
     else if (state_now == STATE__READ_SOLUTION
               && solution_stream.tvalid
               && current_solution_popcount < min_button_presses)
