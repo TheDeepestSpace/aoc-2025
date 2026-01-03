@@ -1,12 +1,13 @@
 module day10
   #(parameter int unsigned MAX_NUM_LIGHTS
   , parameter int unsigned MAX_NUM_BUTTONS
-  , parameter int unsigned AXI_DATA_WIDTH = 8 )
+  , parameter int unsigned AXI_DATA_WIDTH = 8
+  )
   ( input var logic clk
   , input var logic rst_n
 
-  , axi_stream_if #( .DATA_WIDTH ( 8 ) )  data_in
-  , axi_stream_if #( .DATA_WIDTH ( 8 ) ) data_out
+  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) )  data_in
+  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) ) data_out
   );
 
   // state declaration
@@ -31,7 +32,7 @@ module day10
   logic input_read_complete;
   logic last_input;
 
-  day10_input #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input_if();
+  day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input_if();
 
   day10_input_reader
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
@@ -46,6 +47,45 @@ module day10
       , .reader_ready ( input_read_complete )
       , .end_of_input ( last_input          )
       , .day10_input  ( day10_input_if      )
+      );
+
+  // configure machine logic
+
+  day10_output_if #( MAX_NUM_BUTTONS ) day10_output_if();
+
+  logic configure_machine_start;
+  logic configure_machine_complete;
+
+  always_comb configure_machine_start = state_now == STATE__CONFIGURE_MACHINE;
+
+  configure_machine #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS )
+    u_configure_machine
+      ( .clk          ( clk                        )
+      , .rst_n        ( rst_n                      )
+      , .start        ( configure_machine_start    )
+      , .ready        ( configure_machine_complete )
+      , .day10_input  ( day10_input_if             )
+      , .day10_output ( day10_output_if            )
+      );
+
+  // writing output
+
+  logic output_write_start;
+  logic output_write_complete;
+
+  assign output_write_start = state_now == STATE__WRITE_OUTPUT;
+
+  day10_output_writer #( .MAX_NUM_BUTTONS ( MAX_NUM_BUTTONS ), .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ) )
+    u_day10_output_writer
+      ( .clk          ( clk                   )
+      , .rst_n        ( rst_n                 )
+
+      , .day10_output ( day10_output_if       )
+      , .start        ( output_write_start    )
+      , .last_write   ( last_input            )
+      , .writer_ready ( output_write_complete )
+
+      , .data_out     ( data_out              )
       );
 
   // state machine logic

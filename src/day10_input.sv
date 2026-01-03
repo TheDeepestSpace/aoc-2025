@@ -1,3 +1,5 @@
+`default_nettype none
+
 interface day10_input_if
   #(parameter int unsigned MAX_NUM_LIGHTS
   , parameter int unsigned MAX_NUM_BUTTONS

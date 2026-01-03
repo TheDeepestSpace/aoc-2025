@@ -11,16 +11,10 @@ module configure_machine
   ( input var logic clk
   , input var logic rst_n
 
-  , input var logic [MAX_NUM_LIGHTS_W -1:0]  num_lights
-  , input var logic [MAX_NUM_BUTTONS_W -1:0] num_buttons
+  , input  var logic start
+  , output var logic ready
 
-  , input var logic                       start
-  , input var logic [MAX_NUM_LIGHTS -1:0] buttons [MAX_NUM_BUTTONS -1:0]
-  , input var logic [MAX_NUM_LIGHTS -1:0] target_lights_arrangement
-
-  , output var logic                          ready
-  , output var logic [MAX_NUM_PRESSES_W -1:0] min_button_presses
-  , output var logic [MAX_NUM_BUTTONS -1:0]   buttons_to_press
+  , day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input
   );
 
   // state declarations
