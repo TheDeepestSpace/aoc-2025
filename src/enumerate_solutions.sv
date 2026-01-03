@@ -16,7 +16,7 @@ module enumerate_solutions
   , input var logic [MAX_COLS -1:0] RREF [MAX_ROWS -1:0]
 
   // assume 8-bit tdata width
-  , axi_stream_if.master solution_stream
+  , axi_stream_if #( .DATA_WIDTH ( 8 ) ) solution_stream
   );
 
   // state declarations
