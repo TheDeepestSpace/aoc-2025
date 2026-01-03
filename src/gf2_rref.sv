@@ -52,12 +52,12 @@ module gf2_rref
           else if (r == pivot_row_idx)     aug[r] <= aug[col_iter_as_row_iter];
           else                             aug[r] <= aug[r];
         else if (state_now == STATE__ZERO_OUT_COL)
-          if (r == (col_iter_as_row_iter_valid ? col_iter_as_row_iter : row_iter))
+          if (r == row_iter)
             aug[r] <= aug[r];
           else if (aug[r][col_iter] == 0)
             aug[r] <= aug[r];
           else
-            aug[r] <= aug[r] ^ aug[col_iter_as_row_iter_valid ? col_iter_as_row_iter : row_iter];
+            aug[r] <= aug[r] ^ aug[row_iter];
         else
           aug[r] <= aug[r];
       else
@@ -126,6 +126,7 @@ module gf2_rref
           if (pivot_found)                   row_iter <= row_iter;
           else if (row_iter == row_iter_end) row_iter <= row_iter;
           else                               row_iter <= row_iter + 1'b1;
+        STATE__SWAP:                         row_iter <= col_iter_as_row_iter;
         default:                             row_iter <= row_iter;
       endcase
 
