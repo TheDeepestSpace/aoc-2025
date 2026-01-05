@@ -14,16 +14,11 @@ module configure_machine_tb;
   logic clk;
   logic rst_n;
 
-  logic [MAX_NUM_LIGHTS_W -1:0]  num_lights;
-  logic [MAX_NUM_BUTTONS_W -1:0] num_buttons;
+  logic start;
+  logic ready;
 
-  logic                          start;
-  logic [MAX_NUM_LIGHTS -1:0]    buttons [MAX_NUM_BUTTONS -1:0];
-  logic [MAX_NUM_LIGHTS -1:0]    target;
-
-  logic                          ready;
-  logic [MAX_NUM_PRESSES_W -1:0] min_presses;
-  logic [MAX_NUM_BUTTONS -1:0]   buttons_to_press;
+  day10_input_if  #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input();
+  day10_output_if #( MAX_NUM_BUTTONS )                 day10_output();
 
   configure_machine
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
@@ -33,16 +28,11 @@ module configure_machine_tb;
       ( .clk                       ( clk              )
       , .rst_n                     ( rst_n            )
 
-      , .num_lights                ( num_lights       )
-      , .num_buttons               ( num_buttons      )
-
       , .start                     ( start            )
-      , .buttons                   ( buttons          )
-      , .target_lights_arrangement ( target           )
-
       , .ready                     ( ready            )
-      , .min_button_presses        ( min_presses      )
-      , .buttons_to_press          ( buttons_to_press )
+
+      , .day10_input               ( day10_input      )
+      , .day10_output              ( day10_output     )
       );
 
   assign u_cfg.solution_stream.tready = 1'b1;

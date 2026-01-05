@@ -14,7 +14,8 @@ module configure_machine
   , input  var logic start
   , output var logic ready
 
-  , day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input
+  , day10_input_if.as_input   day10_input
+  , day10_output_if.as_output day10_output
   );
 
   // state declarations
@@ -45,8 +46,8 @@ module configure_machine
   for (genvar r = 0; r < MAX_AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
     for (genvar c = MAX_AUG_MAT_COLS -1; c >= 1; c--) begin: l_build_aug_mat_rows
       always_comb
-        if (r < num_lights && MAX_AUG_MAT_COLS -1 -c < num_buttons)
-          augmented_matrix[r][c] = buttons[MAX_AUG_MAT_COLS -1 - c][r];
+        if (r < day10_input.num_lights && MAX_AUG_MAT_COLS -1 -c < day10_input.num_buttons)
+          augmented_matrix[r][c] = day10_input.buttons[MAX_AUG_MAT_COLS -1 - c][r];
         else
           augmented_matrix[r][c] = 'x;
     end
@@ -54,11 +55,12 @@ module configure_machine
 
   for (genvar l = 0; l < MAX_AUG_MAT_ROWS; l++) begin: l_build_aug_mat_last_col
     always_comb
-      if (l < num_lights)
-        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - num_buttons)] =
-          target_lights_arrangement[l];
+      if (l < day10_input.num_lights)
+        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons)] =
+          day10_input.target_lights_arrangement[l];
       else
-        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - num_buttons)] = 'x;
+        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons)] =
+          'x;
   end
 
   // compute RREF
@@ -75,17 +77,17 @@ module configure_machine
     , .MAX_COLS ( MAX_AUG_MAT_COLS )
     )
     u_gf2_rref
-      ( .clk   ( clk              )
-      , .rst_n ( rst_n            )
+      ( .clk   ( clk                         )
+      , .rst_n ( rst_n                       )
 
-      , .rows  ( num_lights       )
-      , .cols  ( num_buttons + 1  )
+      , .rows  ( day10_input.num_lights      )
+      , .cols  ( day10_input.num_buttons + 1 )
 
-      , .start ( rref_start       )
-      , .AUG   ( augmented_matrix )
+      , .start ( rref_start                  )
+      , .AUG   ( augmented_matrix            )
 
-      , .ready ( rref_ready       )
-      , .RREF  ( rref             )
+      , .ready ( rref_ready                  )
+      , .RREF  ( rref                        )
       );
 
   // read off solutions
@@ -103,16 +105,16 @@ module configure_machine
     , .MAX_COLS ( MAX_AUG_MAT_COLS )
     )
     u_enumerate_solutions
-      ( .clk             ( clk                       )
-      , .rst_n           ( rst_n                     )
+      ( .clk             ( clk                         )
+      , .rst_n           ( rst_n                       )
 
-      , .rows            ( num_lights                )
-      , .cols            ( num_buttons + 1           )
+      , .rows            ( day10_input.num_lights      )
+      , .cols            ( day10_input.num_buttons + 1 )
 
-      , .start           ( enumerate_solutions_start )
-      , .RREF            ( rref                      )
+      , .start           ( enumerate_solutions_start   )
+      , .RREF            ( rref                        )
 
-      , .solution_stream ( solution_stream.master    )
+      , .solution_stream ( solution_stream.master      )
       );
 
   // track cheapest solution
@@ -132,23 +134,25 @@ module configure_machine
     )
     u_solution_popcount
       ( .in    ( current_solution          )
-      , .n     ( num_buttons               )
+      , .n     ( day10_input.num_buttons   )
       , .count ( current_solution_popcount )
       );
 
   always_ff @ (posedge clk)
     if (!rst_n)
-      {min_button_presses, buttons_to_press} <=
+      {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
     else if (state_now == STATE__INIT)
-      {min_button_presses, buttons_to_press} <=
+      {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
     else if (state_now == STATE__READ_SOLUTION
               && solution_stream.tvalid
-              && current_solution_popcount < min_button_presses)
-      {min_button_presses, buttons_to_press} <= {current_solution_popcount, current_solution};
+              && current_solution_popcount < day10_output.min_button_presses)
+      {day10_output.min_button_presses, day10_output.buttons_to_press} <=
+        {current_solution_popcount, current_solution};
     else
-      {min_button_presses, buttons_to_press} <= {min_button_presses, buttons_to_press};
+      {day10_output.min_button_presses, day10_output.buttons_to_press} <=
+        {day10_output.min_button_presses, day10_output.buttons_to_press};
 
   // completion check
 

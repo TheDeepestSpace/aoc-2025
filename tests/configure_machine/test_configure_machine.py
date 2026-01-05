@@ -29,18 +29,18 @@ async def run_case(dut, case, max_lights, max_buttons):
     if case.num_lights > max_lights:
         raise AssertionError("Case exceeds max lights")
 
-    dut.num_lights.value = case.num_lights
-    dut.num_buttons.value = num_buttons
+    dut.day10_input.num_lights.value = case.num_lights
+    dut.day10_input.num_buttons.value = num_buttons
 
     for b_idx in range(max_buttons):
-        dut.buttons[b_idx].value = 0
+        dut.day10_input.buttons[b_idx].value = 0
 
     for b_idx, btn in enumerate(case.buttons):
         mask = pack_bits([(l in btn) for l in range(max_lights)])
-        dut.buttons[b_idx].value = mask
+        dut.day10_input.buttons[b_idx].value = mask
 
     target_bits = case.target + ([0] * (max_lights - len(case.target)))
-    dut.target.value = pack_bits(target_bits)
+    dut.day10_input.target_lights_arrangement.value = pack_bits(target_bits)
 
     dut.start.value = 0
     await RisingEdge(dut.clk)
@@ -50,8 +50,8 @@ async def run_case(dut, case, max_lights, max_buttons):
 
     await with_timeout(RisingEdge(dut.ready), 200, "us")
 
-    observed_count = int(dut.min_presses.value)
-    observed_mask_raw = int(dut.buttons_to_press.value)
+    observed_count = int(dut.day10_output.min_button_presses.value)
+    observed_mask_raw = int(dut.day10_output.buttons_to_press.value)
     observed_mask = 0
     for idx in range(max_buttons):
         if observed_mask_raw & (1 << (max_buttons - 1 - idx)):
@@ -77,8 +77,8 @@ async def configure_machine_vectors(dut):
 
     dut.rst_n.value = 0
     dut.start.value = 0
-    dut.num_lights.value = 0
-    dut.num_buttons.value = 0
+    dut.day10_input.num_lights.value = 0
+    dut.day10_input.num_buttons.value = 0
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
     dut.rst_n.value = 1
