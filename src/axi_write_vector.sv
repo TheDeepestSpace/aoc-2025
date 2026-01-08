@@ -13,8 +13,10 @@ module axi_write_vector
   , input var logic last_write
 
   , output var logic ready
-  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) ) data_out
+  , axi_stream_if.master data_out
   );
+
+  // state management
 
   typedef enum logic [1:0]
     { STATE__INIT
@@ -28,17 +30,25 @@ module axi_write_vector
     if (!rst_n) state_now <= STATE__INIT;
     else        state_now <= state_next;
 
+  // chunk processing
+
   localparam int unsigned MAX_CHUNKS =
     (MAX_VEC_LENGTH + AXI_DATA_WIDTH - 1) / AXI_DATA_WIDTH;
   localparam int unsigned MAX_CHUNKS_ITER_W =
     MAX_CHUNKS <= 1 ? 1 : $clog2(MAX_CHUNKS + 1);
+  localparam int unsigned MAX_VEC_LENGTH_WITH_PAD = MAX_CHUNKS * AXI_DATA_WIDTH;
+
+  logic [MAX_VEC_LENGTH_WITH_PAD -1:0] vec_padded;
 
   logic [MAX_CHUNKS_ITER_W -1:0] chunk_iter;
   logic [MAX_CHUNKS_ITER_W -1:0] total_chunks;
   logic [MAX_CHUNKS_ITER_W -1:0] chunk_iter_end;
   logic                          last_chunk;
 
-  assign total_chunks   = (vec_length + AXI_DATA_WIDTH - 1) / AXI_DATA_WIDTH;
+  assign vec_padded = {vec, {(MAX_VEC_LENGTH_WITH_PAD - MAX_VEC_LENGTH){1'b0}}};
+
+  assign total_chunks   =
+    MAX_CHUNKS_ITER_W'((32'(vec_length) + AXI_DATA_WIDTH - 1) / AXI_DATA_WIDTH);
   assign chunk_iter_end = (total_chunks == '0) ? '0 : total_chunks - 1'b1;
   assign last_chunk     = (chunk_iter == chunk_iter_end) && (total_chunks != '0);
 
@@ -56,13 +66,11 @@ module axi_write_vector
   always_comb data_out.tvalid = (state_now == STATE__WRITE_CHUNK);
   always_comb data_out.tlast =  (state_now == STATE__WRITE_CHUNK) && last_chunk && last_write;
 
-  always_comb
-    if (state_now == STATE__WRITE_CHUNK)
-      data_out.tdata = vec[chunk_iter * AXI_DATA_WIDTH +: AXI_DATA_WIDTH];
-    else
-      data_out.tdata = '0;
+  always_comb data_out.tdata = vec_padded[chunk_iter * AXI_DATA_WIDTH +: AXI_DATA_WIDTH];
 
   assign ready = state_now == STATE__DONE;
+
+  // state machine logic
 
   always_comb
     case (state_now)

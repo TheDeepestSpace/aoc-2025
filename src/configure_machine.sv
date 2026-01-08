@@ -15,8 +15,8 @@ module configure_machine
   , output var logic ready
   , input  var logic accepted
 
-  , day10_input_if.as_input   day10_input
-  , day10_output_if.as_output day10_output
+  , day10_input_if.consumer  day10_input
+  , day10_output_if.producer day10_output
   );
 
   // state declarations
@@ -40,7 +40,7 @@ module configure_machine
   localparam int unsigned MAX_AUG_MAT_ROWS = MAX_NUM_LIGHTS;
   localparam int unsigned MAX_AUG_MAT_COLS = MAX_NUM_BUTTONS + 1;
   localparam int unsigned MAX_AUG_MAT_COLS_W =
-    MAX_AUG_MAT_COLS <= 1 ? 1 : $clog2(MAX_AUG_MAT_COLS + 1);
+    MAX_AUG_MAT_COLS <= 1 ? 1 : $clog2(MAX_AUG_MAT_COLS);
 
   logic [MAX_AUG_MAT_COLS -1:0] augmented_matrix [MAX_AUG_MAT_ROWS -1:0];
 

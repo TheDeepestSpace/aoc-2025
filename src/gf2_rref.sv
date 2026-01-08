@@ -82,7 +82,7 @@ module gf2_rref
         default:                col_iter <= col_iter;
       endcase
 
-  always_comb col_rhs_idx = MAX_COLS_W'(MAX_COLS - cols);
+  always_comb col_rhs_idx = MAX_COLS_IDX_W'(MAX_COLS - cols);
 
   // pivot checks
 

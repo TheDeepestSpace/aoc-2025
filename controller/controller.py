@@ -1,92 +1,119 @@
-
-import sys
 import dataclasses
+import logging
 import re
+from typing import Awaitable, Callable
 
-def _bool_list_to_bytes(lst: list[bool]) -> bytes
-  arr = bytearray()
-  byte = 0
-  cnt = 0
 
-  for e in lst:
-    byte = (byte << 1) | int(b)
-    count += 1
-    if count == 8:
-      arr.append(byte)
-      byte = 0
-      cnt = 0
+def _bool_list_to_bytes(bits: list[bool]) -> bytes:
+    arr = bytearray()
+    byte = 0
+    count = 0
 
-  if count != 0:
-    byte <<= (8 - count)
-    out.append(byte)
+    for bit in bits:
+        if bit:
+            byte |= 1 << count
+        count += 1
+        if count == 8:
+            arr.append(byte)
+            byte = 0
+            count = 0
 
-  return bytes(out)
+    if count != 0:
+        arr.append(byte)
 
-def _button_to_lights(button: list[int], num_lights: int) -> list[bool]
-  lights = [False] * num_lights
-  for light_index in button:
-    lights[light_index] = True
-  return mask
+    return bytes(arr)
+
+
+def _bytes_to_bool_list(data: bytes, num_bits: int) -> list[bool]:
+    bits = []
+    for idx in range(num_bits):
+        byte = data[idx // 8]
+        bits.append(bool((byte >> (7 - (idx % 8))) & 1))
+    return bits
+
+
+def _button_to_lights(button: list[int], num_lights: int) -> list[bool]:
+    lights = [False] * num_lights
+    for light_index in button:
+        lights[light_index] = True
+    return lights
+
 
 @dataclasses.dataclass(frozen=True)
 class MachineData:
-  target_lights_arrangement: list[bool]
-  buttons: list[list[int]]
+    target_lights_arrangement: list[bool]
+    buttons: list[list[int]]
 
-  @classmethod
-  from_input_string(cls, input_string: str) -> MachineData:
-    str_target_lights_arrangement = input_string.split("[", 1)[1].split("]", 1)[0]
-    target_lights_arrangement = [ch == '#' for ch in str_target_lights_arrangement]
-    buttons = [
-      list(
-        map(int, str_button.split(','))) for str_button in re.findall(r"\(([^\)]*)\)", input_string
-      )
-    ]
+    @classmethod
+    def from_input_string(cls, input_string: str) -> "MachineData":
+        str_target_lights_arrangement = input_string.split("[", 1)[1].split("]", 1)[0]
+        target_lights_arrangement = [ch == "#" for ch in str_target_lights_arrangement]
+        buttons = [
+            list(map(int, str_button.split(",")))
+            for str_button in re.findall(r"\(([^\)]*)\)", input_string)
+        ]
 
-    return MachineData(target_lights_arrangement=target_lights_arrangement, buttons=buttons)
+        return cls(target_lights_arrangement=target_lights_arrangement, buttons=buttons)
 
-  to_axi_sting(self) -> bytes
-    b_num_lights = len(self.target_lights_arrangement).to_bytes(1, signed=False)
-    b_target_lights_arrangement = b"".join(map(_bool_list_to_bytes, target_lights_arrangement))
-    b_num_buttons = len(self.buttons).to_bytes(1, signed=False)
-    b_buttons = b"".join(
-      [b"".join(
-        list(
-          map(_bool_list_to_bytes, _button_to_lights(button, len(self.target_lights_arrangement)))
+    def to_axi_string(self) -> bytes:
+        b_num_lights = \
+          len(self.target_lights_arrangement).to_bytes(1, byteorder="big", signed=False)
+        b_target_lights_arrangement = _bool_list_to_bytes(self.target_lights_arrangement)
+        b_num_buttons = len(self.buttons).to_bytes(1, byteorder="big", signed=False)
+        b_buttons = b"".join(
+            _bool_list_to_bytes(
+                _button_to_lights(button, len(self.target_lights_arrangement))
+            )
+            for button in self.buttons
         )
-      )
-      for button in self.buttons]
-    )
 
-    return b_num_lights + b_target_lights_arrangement + b_num_buttons + b_buttons
+        return b_num_lights + b_target_lights_arrangement + b_num_buttons + b_buttons
 
+
+@dataclasses.dataclass(frozen=True)
 class MachineConfigurationData:
-  min_button_presses: int
-  buttons_to_press: list[bool]
+    min_button_presses: int
+    buttons_to_press: list[bool]
 
-  @classmethod
-  from_axi_string(cls, corresponding_machine_data: MachineData, axi_string: bytearray)
-    -> MachineConfigurationData:
-    min_button_presses = axi_string.pop(0)
+    @classmethod
+    def from_axi_string(
+        cls, corresponding_machine_data: MachineData, axi_string: bytearray
+    ) -> "MachineConfigurationData":
+        min_button_presses = axi_string.pop(0)
 
-    buttons_to_press_len = (corresponding_machine_data.num_lights + 7) // 8 * 8
-    buttons_to_press = aix_string.pop(buttons_to_press_len)
+        num_buttons = len(corresponding_machine_data.buttons)
+        buttons_to_press_len = (num_buttons + 7) // 8
+        buttons_to_press_bytes = bytes(axi_string[:buttons_to_press_len])
+        del axi_string[:buttons_to_press_len]
+        buttons_to_press = _bytes_to_bool_list(buttons_to_press_bytes, num_buttons)
 
-    return MachineData(min_button_presses=min_button_presses, buttons_to_press=buttons_to_press)
+        return cls(
+            min_button_presses=min_button_presses, buttons_to_press=buttons_to_press
+        )
 
-[configuration_file] = sys.argv[1:]
+def print_configuration(num: int, md: MachineData, mdc: MachineConfigurationData):
+    num_lights = len(md.target_lights_arrangement)
+    expected = "".join("#" if light_on else "." for light_on in md.target_lights_arrangement)
+    print(f"[machine {num}] expected:")
+    print(f"[machine {num}] [{expected}]")
+    print(f"[machine {num}] configuring:")
+    lights = [False] * num_lights
+    print(f"[machine {num}] [" + "." * num_lights + "]")
+    for idx, should_press in enumerate(mdc.buttons_to_press):
+        if not should_press:
+            continue
+        for light_index in md.buttons[idx]:
+            lights[light_index] = not lights[light_index]
+        print(f"[machine {num}] [" + "".join("#" if light_on else "." for light_on in lights) + "]")
+    print(f"[machine {num}] done configuring")
+    print(f"[machine {num}] lights match target arrangement: {lights == md.target_lights_arrangement}")
 
-with open(configuration_file, "r") as f:
-  mds = [MachineData.from_input_string(input_line) for input_line in f]
-  axi_data_in = b"".join(map(md.to_axi_sting() for md in mds))
+async def control(input_file: str, send: Callable[[bytes], Awaitable[bytes]]) -> None:
+    with open(input_file, "r", encoding="utf-8") as f:
+        mds = [MachineData.from_input_string(input_line) for input_line in f]
+        axi_data_in = b"".join(md.to_axi_string() for md in mds)
 
-  axi_data_out = send(axi_data_in)
-  for md in mds:
-    mdc = MachineConfigurationData.from_axi_string(md, axi_data_out)
-    print(mcd)
-
-
-
-
-
-
+    axi_data_out = bytearray(await send(axi_data_in))
+    for idx, md in enumerate(mds):
+        mdc = MachineConfigurationData.from_axi_string(md, axi_data_out)
+        print_configuration(idx + 1, md, mdc)

@@ -6,8 +6,8 @@ module day10
   ( input var logic clk
   , input var logic rst_n
 
-  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) )  data_in
-  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) ) data_out
+  , axi_stream_if.slave  data_in
+  , axi_stream_if.master data_out
   );
 
   // state declaration
@@ -15,16 +15,19 @@ module day10
   typedef enum logic [2:0]
     { STATE__INIT
     , STATE__READ_INPUT
+    , STATE__WAIT_READ_INPUT
     , STATE__CONFIGURE_MACHINE
+    , STATE__WAIT_CONFIGURE_MACHINE
     , STATE__WRITE_OUTPUT
+    , STATE__WAIT_WRITE_OUTPUT
     , STATE__DONE
     } state_t;
 
   state_t state_now, state_next;
 
   always_ff @ (posedge clk)
-    if (!rst_n) state_now  <= STATE__INIT;
-    else        state_next <= state_next;
+    if (!rst_n) state_now <= STATE__INIT;
+    else        state_now <= state_next;
 
   // reading input
 
@@ -33,6 +36,8 @@ module day10
   logic last_input;
 
   day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input_if();
+
+  assign input_read_start = state_now == STATE__READ_INPUT;
 
   day10_input_reader
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
@@ -64,6 +69,7 @@ module day10
       , .rst_n        ( rst_n                      )
       , .start        ( configure_machine_start    )
       , .ready        ( configure_machine_complete )
+      , .accepted     ( output_write_complete      )
       , .day10_input  ( day10_input_if             )
       , .day10_output ( day10_output_if            )
       );
@@ -80,6 +86,7 @@ module day10
       ( .clk          ( clk                   )
       , .rst_n        ( rst_n                 )
 
+      , .day10_input  ( day10_input_if        )
       , .day10_output ( day10_output_if       )
       , .start        ( output_write_start    )
       , .last_write   ( last_input            )
@@ -93,17 +100,17 @@ module day10
   always_comb
     case (state_now)
       STATE__INIT:                      state_next = STATE__READ_INPUT;
-      STATE__READ_INPUT:
+      STATE__READ_INPUT, STATE__WAIT_READ_INPUT:
         if (input_read_complete)        state_next = STATE__CONFIGURE_MACHINE;
-        else                            state_next = STATE__READ_INPUT;
-      STATE__CONFIGURE_MACHINE:
+        else                            state_next = STATE__WAIT_READ_INPUT;
+      STATE__CONFIGURE_MACHINE, STATE__WAIT_CONFIGURE_MACHINE:
         if (configure_machine_complete) state_next = STATE__WRITE_OUTPUT;
-        else                            state_next = STATE__CONFIGURE_MACHINE;
-      STATE__WRITE_OUTPUT:
+        else                            state_next = STATE__WAIT_CONFIGURE_MACHINE;
+      STATE__WRITE_OUTPUT, STATE__WAIT_WRITE_OUTPUT:
         if (output_write_complete)
           if (last_input)               state_next = STATE__DONE;
           else                          state_next = STATE__READ_INPUT;
-        else                            state_next = STATE__WRITE_OUTPUT;
+        else                            state_next = STATE__WAIT_WRITE_OUTPUT;
       STATE__DONE:                      state_next = STATE__DONE;
       default:                          state_next = STATE__INIT;
     endcase

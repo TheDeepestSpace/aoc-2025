@@ -9,13 +9,13 @@ module day10_input_reader
   ( input var logic clk
   , input var logic rst_n
 
-  , axi_stream_if #( .DATA_WIDTH ( AXI_DATA_WIDTH ) ) data_in
+  , axi_stream_if.slave data_in
 
   , input  var logic start
   , output var logic reader_ready
   , output var logic end_of_input
 
-  , day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input
+  , day10_input_if.producer day10_input
   );
 
   // state declarations
@@ -31,38 +31,50 @@ module day10_input_reader
 
   state_t state_now, state_next;
 
-  // axi stream readiness
-
   always_ff @ (posedge clk)
-    if (!rst_n)               data_in.tready <= '0;
-    else
-      case (state_now)
-        STATE__READ_LIGHTS_COUNT
-        , STATE__READ_TARGET_LIGHTS_ARRANGEMENT
-        , STATE__READ_BUTTON_COUNT
-        , STATE__READ_BUTTON: data_in.tready <= 1'b1;
-        default:              data_in.tready <= '0;
-      endcase
+    if (!rst_n) state_now <= STATE__INIT;
+    else        state_now <= state_next;
+
+  // axi stream proxies
+
+  axi_stream_if #( AXI_DATA_WIDTH ) lights_data_in();
+  axi_stream_if #( AXI_DATA_WIDTH ) buttons_data_in();
+
+  assign lights_data_in.tvalid = data_in.tvalid;
+  assign lights_data_in.tdata  = data_in.tdata;
+
+  assign buttons_data_in.tvalid = data_in.tvalid;
+  assign buttons_data_in.tdata  = data_in.tdata;
+
+  always_comb
+    case (state_now)
+      STATE__READ_LIGHTS_COUNT, STATE__READ_BUTTON_COUNT: data_in.tready = 1'b1;
+      STATE__READ_TARGET_LIGHTS_ARRANGEMENT:              data_in.tready = lights_data_in.tready;
+      STATE__READ_BUTTON:                                 data_in.tready = buttons_data_in.tready;
+      default:                                            data_in.tready = '0;
+    endcase
 
   // consumer readiness
 
   assign reader_ready = state_now == STATE__READER_READY;
-  assign end_of_input = data_in.tlast;
+
+  always_ff @ (posedge clk)
+    if (data_in.tlast)
+      end_of_input <= 1'b1;
+    else
+      end_of_input <= end_of_input;
 
   // reading lights count
 
   logic light_count_read_completed;
 
-  always_ff @ (posedge clk)
-    if (!rst_n)               light_count_read_completed <= '0;
-    else
-      case (state_now)
-        STATE__INIT:          light_count_read_completed <= '0;
-        STATE__READ_LIGHTS_COUNT:
-          if (data_in.tvalid) light_count_read_completed <= 1'b1;
-          else                light_count_read_completed <= '0;
-        default:              light_count_read_completed <= '0;
-      endcase
+  always_comb
+    case (state_now)
+      STATE__READ_LIGHTS_COUNT:
+        if (data_in.tvalid) light_count_read_completed = 1'b1;
+        else                light_count_read_completed = '0;
+      default:              light_count_read_completed = '0;
+    endcase
 
   always_ff @ (posedge clk)
     case (state_now)
@@ -87,7 +99,7 @@ module day10_input_reader
 
       , .start      ( target_lights_arrangement_read_start     )
       , .vec_length ( day10_input.num_lights                   )
-      , .data_in    ( data_in                                  )
+      , .data_in    ( lights_data_in                           )
 
       , .ready      ( target_lights_arrangement_read_completed )
       , .vec        ( day10_input.target_lights_arrangement    )
@@ -97,16 +109,14 @@ module day10_input_reader
 
   logic button_count_read_completed;
 
-  always_ff @ (posedge clk)
-    if (!rst_n)               button_count_read_completed <= '0;
-    else
-      case (state_now)
-        STATE__INIT:          button_count_read_completed <= '0;
-        STATE__READ_BUTTON_COUNT:
-          if (data_in.tvalid) button_count_read_completed <= 1'b1;
-          else                button_count_read_completed <= '0;
-        default:              button_count_read_completed <= '0;
-      endcase
+  always_comb
+    case (state_now)
+      STATE__INIT:          button_count_read_completed = '0;
+      STATE__READ_BUTTON_COUNT:
+        if (data_in.tvalid) button_count_read_completed = 1'b1;
+        else                button_count_read_completed = '0;
+      default:              button_count_read_completed = '0;
+    endcase
 
   always_ff @ (posedge clk)
     case (state_now)
@@ -126,13 +136,19 @@ module day10_input_reader
 
   assign buttons_read_start = state_now == STATE__READ_BUTTON;
 
-  assign buttons_read_completed = button_iter == day10_input.num_buttons;
+  assign buttons_read_completed = button_ready && button_iter == day10_input.num_buttons - 1;
 
   always_ff @ (posedge clk)
     if (!rst_n) button_iter <= '0;
     else
       case (state_now)
-        STATE__INIT: button_iter <= '0;
+        // note how we are not resetting button iter at STATE__INIT; this is because we want to
+        // continue button axi reader to stream into the last button; if we change button_iter to 0
+        // once we are done reading, the last button's data will spill into the first one because
+        // button vector reader works as a tube that we point to the right button vector to stream
+        // into; therefore we are only resetting the button iter when we are about to start reading
+        // buttons
+        STATE__READ_BUTTON_COUNT: button_iter <= '0;
         STATE__READ_BUTTON:
           if (button_ready && button_iter < day10_input.num_buttons)
             button_iter <= button_iter + 1'b1;
@@ -148,7 +164,7 @@ module day10_input_reader
 
       , .start      ( buttons_read_start               )
       , .vec_length ( day10_input.num_lights           )
-      , .data_in    ( data_in                          )
+      , .data_in    ( buttons_data_in                  )
 
       , .ready      ( button_ready                     )
       , .vec        ( day10_input.buttons[button_iter] )

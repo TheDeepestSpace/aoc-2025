@@ -8,7 +8,12 @@ interface day10_output_if
   logic [MAX_NUM_PRESSES_W -1:0] min_button_presses;
   logic [MAX_NUM_BUTTONS -1:0]   buttons_to_press;
 
-  modport as_output
+  modport consumer
+    ( input min_button_presses
+    , input buttons_to_press
+    );
+
+  modport producer
     ( output min_button_presses
     , output buttons_to_press
     );
