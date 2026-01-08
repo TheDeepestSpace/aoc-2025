@@ -166,7 +166,9 @@ module enumerate_solutions
   for (genvar c = MAX_VARS_COUNT - 1; c >= 0; c--) begin: l_build_bases_col
     for (genvar r = 0; r < MAX_VARS_COUNT; r++) begin: l_build_bases_row
       always_comb
-        if (c + 1 > col_rhs_idx)
+        if (state_now == STATE__INIT)
+          bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = '0;
+        else if (c + 1 > col_rhs_idx)
           if (state_now == STATE__INIT) bases[c][MAX_VARS_COUNT -1 - r] = '0;
           else if (free_vars_mask[c] != '0)
             if (r == MAX_VARS_COUNT -1 - c)
