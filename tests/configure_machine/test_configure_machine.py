@@ -45,6 +45,7 @@ async def run_case(dut, case, max_lights, max_buttons):
     dut.start.value = 0
     await RisingEdge(dut.clk)
     dut.start.value = 1
+    dut.accepted.value = 1;
     await RisingEdge(dut.clk)
     dut.start.value = 0
 

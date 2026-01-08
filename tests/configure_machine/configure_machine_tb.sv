@@ -16,6 +16,7 @@ module configure_machine_tb;
 
   logic start;
   logic ready;
+  logic accepted;
 
   day10_input_if  #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input();
   day10_output_if #( MAX_NUM_BUTTONS )                 day10_output();
@@ -30,6 +31,7 @@ module configure_machine_tb;
 
       , .start                     ( start            )
       , .ready                     ( ready            )
+      , .accepted                  ( accepted         )
 
       , .day10_input               ( day10_input      )
       , .day10_output              ( day10_output     )

@@ -13,6 +13,7 @@ module configure_machine
 
   , input  var logic start
   , output var logic ready
+  , input  var logic accepted
 
   , day10_input_if.as_input   day10_input
   , day10_output_if.as_output day10_output
@@ -178,7 +179,9 @@ module configure_machine
       STATE__READ_SOLUTION:
         if (solution_stream.tlast) state_next = STATE__DONE;
         else                       state_next = STATE__READ_SOLUTION;
-      STATE__DONE:                 state_next = STATE__INIT;
+      STATE__DONE:
+        if (accepted)              state_next = STATE__INIT;
+        else                       state_next = STATE__DONE;
       default:                     state_next = STATE__INIT;
     endcase
 
