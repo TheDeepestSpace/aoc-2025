@@ -35,6 +35,4 @@ module configure_machine_tb;
       , .day10_output              ( day10_output     )
       );
 
-  assign u_cfg.solution_stream.tready = 1'b1;
-
 endmodule

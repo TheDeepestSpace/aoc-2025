@@ -95,6 +95,8 @@ module configure_machine
   logic enumerate_solutions_start;
   axi_stream_if #( .DATA_WIDTH ( 8 ) ) solution_stream();
 
+  assign solution_stream.tready = state_now == STATE__READ_SOLUTION;
+
   always_ff @ (posedge clk)
     if (!rst_n)                                 enumerate_solutions_start <= '0;
     else if (state_now == STATE__READ_SOLUTION) enumerate_solutions_start <= 1'b1;
