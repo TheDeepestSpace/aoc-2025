@@ -5,6 +5,7 @@ module enumerate_solutions
   , parameter int unsigned MAX_COLS
   , parameter int unsigned MAX_ROWS_W = (MAX_ROWS <= 1) ? 1 : $clog2(MAX_ROWS + 1)
   , parameter int unsigned MAX_COLS_W = (MAX_COLS <= 1) ? 1 : $clog2(MAX_COLS + 1)
+  , parameter int unsigned AXI_DATA_WIDTH = 8
   )
   ( input var logic clk
   , input var logic rst_n
@@ -15,8 +16,7 @@ module enumerate_solutions
   , input var logic start
   , input var logic [MAX_COLS -1:0] RREF [MAX_ROWS -1:0]
 
-  // assume 8-bit tdata width
-  , axi_stream_if #( .DATA_WIDTH ( 8 ) ) solution_stream
+  , axi_stream_if.master solution_stream
   );
 
   // state declarations
@@ -25,7 +25,7 @@ module enumerate_solutions
     { STATE__INIT
     , STATE__FIND_BASE_SOLUTION
     , STATE__FIND_NEXT_SOLUTION
-    , STATE__WAIT_FOR_RECEIPT
+    , STATE__WRITE_SOLUTION
     , STATE__DONE
     } state_t;
 
@@ -237,22 +237,39 @@ module enumerate_solutions
   // last solution check
 
   logic last_solution;
-  always_comb last_solution = free_vars_iterator == free_vars_iterator_stop;
+  always_ff @ (posedge clk)
+    if (!rst_n) last_solution <= '0;
+    else
+      case (state_now)
+        STATE__INIT:
+          last_solution <= '0;
+        STATE__FIND_NEXT_SOLUTION, STATE__FIND_BASE_SOLUTION:
+          last_solution <= free_vars_iterator == free_vars_iterator_stop;
+        default:
+          last_solution <= last_solution;
+      endcase
 
   // solution streaming
 
-  // currently only works for up to 8 variables
-  logic [solution_stream.DATA_WIDTH - MAX_VARS_COUNT - 1:0] t_data_padding = '0;
+  logic solution_write_start;
+  logic solution_write_complete;
 
-  always_comb
-    case (state_now)
-      STATE__FIND_BASE_SOLUTION, STATE__FIND_NEXT_SOLUTION:
-        {solution_stream.tvalid, solution_stream.tdata, solution_stream.tlast} =
-          {1'b1, x_next, t_data_padding, (last_solution ? 1'b1 : 1'b0)};
-      default:
-        {solution_stream.tvalid, solution_stream.tdata, solution_stream.tlast} =
-          {1'b0, {solution_stream.DATA_WIDTH{1'b0}}, 1'b0};
-    endcase
+  assign solution_write_start =
+    state_now == STATE__FIND_BASE_SOLUTION || state_now == STATE__FIND_NEXT_SOLUTION;
+
+  axi_write_vector #( .MAX_VEC_LENGTH ( MAX_VARS_COUNT ), .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ) )
+    u_axi_write_solution
+      ( .clk        ( clk                     )
+      , .rst_n      ( rst_n                   )
+
+      , .start      ( solution_write_start    )
+      , .vec_length ( vars                    )
+      , .vec        ( x_next                  )
+      , .last_write ( last_solution           )
+
+      , .ready      ( solution_write_complete )
+      , .data_out   ( solution_stream         )
+      );
 
   // states logic
 
@@ -261,21 +278,11 @@ module enumerate_solutions
       STATE__INIT:
         if (start)                  state_next = STATE__FIND_BASE_SOLUTION;
         else                        state_next = STATE__INIT;
-      STATE__FIND_BASE_SOLUTION:
-        if (solution_stream.tready)
+      STATE__FIND_BASE_SOLUTION, STATE__FIND_NEXT_SOLUTION, STATE__WRITE_SOLUTION:
+        if (solution_write_complete)
           if (last_solution)        state_next = STATE__DONE;
           else                      state_next = STATE__FIND_NEXT_SOLUTION;
-        else                        state_next = STATE__WAIT_FOR_RECEIPT;
-      STATE__FIND_NEXT_SOLUTION:
-        if (solution_stream.tready)
-          if (last_solution)        state_next = STATE__DONE;
-          else                      state_next = STATE__FIND_NEXT_SOLUTION;
-        else                        state_next = STATE__WAIT_FOR_RECEIPT;
-      STATE__WAIT_FOR_RECEIPT:
-        if (solution_stream.tready)
-          if (last_solution)        state_next = STATE__DONE;
-          else                      state_next = STATE__FIND_NEXT_SOLUTION;
-        else                        state_next = STATE__WAIT_FOR_RECEIPT;
+        else                        state_next = STATE__WRITE_SOLUTION;
       STATE__DONE:                  state_next = STATE__INIT;
       default:                      state_next = STATE__INIT;
     endcase

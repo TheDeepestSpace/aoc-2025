@@ -3,6 +3,8 @@ SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
 VERILOG_SOURCES += $(CURDIR)/../../src/axi_stream_if.svh \
+                   $(CURDIR)/../../src/axi_read_vector.sv \
+                   $(CURDIR)/../../src/axi_write_vector.sv \
                    $(CURDIR)/../../src/day10_input.sv \
                    $(CURDIR)/../../src/day10_output.sv \
                    $(CURDIR)/../../src/popcount.sv \

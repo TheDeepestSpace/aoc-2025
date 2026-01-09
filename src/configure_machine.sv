@@ -7,6 +7,7 @@ module configure_machine
       MAX_NUM_BUTTONS <= 1 ? 1 : $clog2(MAX_NUM_BUTTONS + 1)
   , parameter int unsigned MAX_NUM_LIGHTS_W  = MAX_NUM_LIGHTS <= 1 ? 1 : $clog2(MAX_NUM_LIGHTS + 1)
   , parameter int unsigned MAX_NUM_PRESSES_W = MAX_NUM_BUTTONS_W
+  , parameter int unsigned AXI_DATA_WIDTH = 8
   )
   ( input var logic clk
   , input var logic rst_n
@@ -25,7 +26,9 @@ module configure_machine
     { STATE__INIT
     , STATE__START_COMPUTE_RREF
     , STATE__WAIT_COMPUTE_RREF
-    , STATE__READ_SOLUTION
+    , STATE__READ_SOLUTION_START
+    , STATE__READ_SOLUTION_WAIT
+    , STATE__PROCESS_SOLUTION
     , STATE__DONE
     } state_t;
 
@@ -91,21 +94,20 @@ module configure_machine
       , .RREF  ( rref                        )
       );
 
-  // read off solutions
+  // enumerate solutions
 
   logic enumerate_solutions_start;
-  axi_stream_if #( .DATA_WIDTH ( 8 ) ) solution_stream();
-
-  assign solution_stream.tready = state_now == STATE__READ_SOLUTION;
+  axi_stream_if #( AXI_DATA_WIDTH ) solution_stream();
 
   always_ff @ (posedge clk)
-    if (!rst_n)                                 enumerate_solutions_start <= '0;
-    else if (state_now == STATE__READ_SOLUTION) enumerate_solutions_start <= 1'b1;
-    else                                        enumerate_solutions_start <= '0;
+    if (!rst_n)                                       enumerate_solutions_start <= '0;
+    else if (state_now == STATE__READ_SOLUTION_START) enumerate_solutions_start <= 1'b1;
+    else                                              enumerate_solutions_start <= '0;
 
   enumerate_solutions
-    #(.MAX_ROWS ( MAX_AUG_MAT_ROWS )
-    , .MAX_COLS ( MAX_AUG_MAT_COLS )
+    #(.MAX_ROWS       ( MAX_AUG_MAT_ROWS )
+    , .MAX_COLS       ( MAX_AUG_MAT_COLS )
+    , .AXI_DATA_WIDTH ( AXI_DATA_WIDTH   )
     )
     u_enumerate_solutions
       ( .clk             ( clk                         )
@@ -120,16 +122,37 @@ module configure_machine
       , .solution_stream ( solution_stream.master      )
       );
 
+  // read next solution
+
+  logic solution_read_start;
+  logic solution_read_complete;
+  logic solution_read_last;
+
+  logic [MAX_NUM_BUTTONS -1:0] current_solution;
+
+  assign solution_read_start = state_now == STATE__READ_SOLUTION_START;
+
+  axi_read_vector
+    #(.MAX_VEC_LENGTH ( MAX_NUM_BUTTONS )
+    , .AXI_DATA_WIDTH ( AXI_DATA_WIDTH  )
+    , .READ_DIR       ( DIR__LEFT       )
+    )
+    u_axi_read_solution
+      ( .clk        ( clk                     )
+      , .rst_n      ( rst_n                   )
+
+      , .start      ( solution_read_start     )
+      , .vec_length ( day10_input.num_buttons )
+      , .data_in    ( solution_stream.slave   )
+
+      , .ready      ( solution_read_complete  )
+      , .last       ( solution_read_last      )
+      , .vec        ( current_solution        )
+      );
+
   // track cheapest solution
 
-  logic [MAX_NUM_BUTTONS -1:0]   current_solution;
   logic [MAX_NUM_PRESSES_W -1:0] current_solution_popcount;
-
-  always_comb current_solution =
-    solution_stream.tdata
-      [ solution_stream.DATA_WIDTH -1
-      : solution_stream.DATA_WIDTH -1 - MAX_NUM_BUTTONS +1
-      ];
 
   popcount
     #(.MAX_N ( MAX_NUM_BUTTONS   )
@@ -148,8 +171,7 @@ module configure_machine
     else if (state_now == STATE__INIT)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
-    else if (state_now == STATE__READ_SOLUTION
-              && solution_stream.tvalid
+    else if (state_now == STATE__PROCESS_SOLUTION
               && current_solution_popcount < day10_output.min_button_presses)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {current_solution_popcount, current_solution};
@@ -168,21 +190,24 @@ module configure_machine
   always_comb
     case (state_now)
       STATE__INIT:
-        if (start)                 state_next = STATE__START_COMPUTE_RREF;
-        else                       state_next = STATE__INIT;
+        if (start)                  state_next = STATE__START_COMPUTE_RREF;
+        else                        state_next = STATE__INIT;
       STATE__START_COMPUTE_RREF:
-        if (rref_ready)            state_next = STATE__READ_SOLUTION;
-        else                       state_next = STATE__WAIT_COMPUTE_RREF;
+        if (rref_ready)             state_next = STATE__READ_SOLUTION_START;
+        else                        state_next = STATE__WAIT_COMPUTE_RREF;
       STATE__WAIT_COMPUTE_RREF:
-        if (rref_ready)            state_next = STATE__READ_SOLUTION;
-        else                       state_next = STATE__WAIT_COMPUTE_RREF;
-      STATE__READ_SOLUTION:
-        if (solution_stream.tlast) state_next = STATE__DONE;
-        else                       state_next = STATE__READ_SOLUTION;
+        if (rref_ready)             state_next = STATE__READ_SOLUTION_START;
+        else                        state_next = STATE__WAIT_COMPUTE_RREF;
+      STATE__READ_SOLUTION_START, STATE__READ_SOLUTION_WAIT:
+        if (solution_read_complete) state_next = STATE__PROCESS_SOLUTION;
+        else                        state_next = STATE__READ_SOLUTION_WAIT;
+      STATE__PROCESS_SOLUTION:
+        if (solution_read_last)     state_next = STATE__DONE;
+        else                        state_next = STATE__READ_SOLUTION_START;
       STATE__DONE:
-        if (accepted)              state_next = STATE__INIT;
-        else                       state_next = STATE__DONE;
-      default:                     state_next = STATE__INIT;
+        if (accepted)               state_next = STATE__INIT;
+        else                        state_next = STATE__DONE;
+      default:                      state_next = STATE__INIT;
     endcase
 
 endmodule

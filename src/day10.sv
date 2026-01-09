@@ -63,7 +63,11 @@ module day10
 
   always_comb configure_machine_start = state_now == STATE__CONFIGURE_MACHINE;
 
-  configure_machine #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS )
+  configure_machine
+    #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
+    , .MAX_NUM_BUTTONS ( MAX_NUM_BUTTONS )
+    , .AXI_DATA_WIDTH  ( AXI_DATA_WIDTH  )
+    )
     u_configure_machine
       ( .clk          ( clk                        )
       , .rst_n        ( rst_n                      )

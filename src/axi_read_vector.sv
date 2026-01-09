@@ -1,8 +1,11 @@
+typedef enum logic [0:0] { DIR__LEFT, DIR__RIGHT } dir_e;
+
 module axi_read_vector
   #(parameter int unsigned MAX_VEC_LENGTH
   , parameter int unsigned AXI_DATA_WIDTH
   , parameter int unsigned MAX_VEC_LENGTH_W =
     MAX_VEC_LENGTH <= 1 ? 1 : $clog2(MAX_VEC_LENGTH + 1)
+  , parameter dir_e READ_DIR
   )
   ( input var logic clk
   , input var logic rst_n
@@ -13,6 +16,7 @@ module axi_read_vector
   , axi_stream_if.slave data_in
 
   , output var logic ready
+  , output var logic last
   , output var logic [MAX_VEC_LENGTH -1:0] vec
   );
 
@@ -21,7 +25,6 @@ module axi_read_vector
   typedef enum logic [2:0]
     { STATE__INIT
     , STATE__READ_CHUNK
-    , STATE__DONE
     } state_t;
 
   state_t state_now, state_next;
@@ -38,9 +41,13 @@ module axi_read_vector
       default:           data_in.tready = '0;
     endcase
 
-  // reader readiness
+  // axi last check
 
-  assign ready = state_now == STATE__DONE;
+  always_ff @ (posedge clk)
+    if (!rst_n)                        last <= '0;
+    else if (state_now == STATE__INIT) last <= '0;
+    else if (data_in.tlast)            last <= 1'b1;
+    else                               last <= last;
 
   // reading chunks
 
@@ -53,7 +60,15 @@ module axi_read_vector
   logic [MAX_CHUNKS_ITER_W -1:0] chunk_iter;
   logic [MAX_CHUNKS_ITER_W -1:0] chunk_iter_end;
 
-  assign vec = vec_padded[MAX_VEC_LENGTH -1:0];
+  case (READ_DIR)
+    DIR__RIGHT: begin: l_dir_left
+      assign vec = vec_padded[MAX_VEC_LENGTH -1:0];
+    end
+    DIR__LEFT: begin: l_dir_right
+      assign vec =
+        vec_padded[MAX_VEC_LENGTH_WITH_PAD -1 -:MAX_VEC_LENGTH];
+    end
+  endcase
 
   assign chunk_iter_end =
     MAX_CHUNKS_ITER_W'((32'(vec_length) + AXI_DATA_WIDTH - 1) / AXI_DATA_WIDTH - 1);
@@ -82,18 +97,21 @@ module axi_read_vector
           vec_padded[chunk_iter * AXI_DATA_WIDTH +:AXI_DATA_WIDTH];
     endcase
 
+  // reader readiness
+
+  assign ready = state_now == STATE__READ_CHUNK && chunk_iter == chunk_iter_end && data_in.tvalid;
+
   // state machine logic
 
   always_comb
     case (state_now)
       STATE__INIT:
-        if (start)                        state_next = STATE__READ_CHUNK;
-        else                              state_next = STATE__INIT;
+        if (start)                                          state_next = STATE__READ_CHUNK;
+        else                                                state_next = STATE__INIT;
       STATE__READ_CHUNK:
-        if (chunk_iter == chunk_iter_end) state_next = STATE__DONE;
-        else                              state_next = STATE__READ_CHUNK;
-      STATE__DONE:                        state_next = STATE__INIT;
-      default:                            state_next = STATE__INIT;
+        if (chunk_iter == chunk_iter_end && data_in.tvalid) state_next = STATE__INIT;
+        else                                                state_next = STATE__READ_CHUNK;
+      default:                                              state_next = STATE__INIT;
     endcase
 
 endmodule

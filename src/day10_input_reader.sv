@@ -89,10 +89,17 @@ module day10_input_reader
   logic target_lights_arrangement_read_start;
   logic target_lights_arrangement_read_completed;
 
+  // don't care, relay on the protocol format
+  logic target_lights_arrangement_read_last;
+
   assign target_lights_arrangement_read_start =
     state_now == STATE__READ_TARGET_LIGHTS_ARRANGEMENT;
 
-  axi_read_vector #( .MAX_VEC_LENGTH ( MAX_NUM_LIGHTS ), .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ) )
+  axi_read_vector
+    #(.MAX_VEC_LENGTH ( MAX_NUM_LIGHTS )
+    , .AXI_DATA_WIDTH ( AXI_DATA_WIDTH )
+    , .READ_DIR       ( DIR__RIGHT     )
+    )
     u_axi_read_target_lights_arrengement
       ( .clk        ( clk                                      )
       , .rst_n      ( rst_n                                    )
@@ -102,6 +109,7 @@ module day10_input_reader
       , .data_in    ( lights_data_in                           )
 
       , .ready      ( target_lights_arrangement_read_completed )
+      , .last       ( target_lights_arrangement_read_last      )
       , .vec        ( day10_input.target_lights_arrangement    )
       );
 
@@ -130,6 +138,10 @@ module day10_input_reader
 
   logic buttons_read_start;
   logic buttons_read_completed;
+
+  // dont care, rely on the protocol format
+  logic buttons_read_last;
+
   logic button_ready;
 
   logic [MAX_NUM_BUTTONS_W -1:0] button_iter;
@@ -157,7 +169,11 @@ module day10_input_reader
         default: button_iter <= button_iter;
       endcase
 
-  axi_read_vector #( .MAX_VEC_LENGTH ( MAX_NUM_BUTTONS ), .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ) )
+  axi_read_vector
+    #(.MAX_VEC_LENGTH ( MAX_NUM_BUTTONS )
+    , .AXI_DATA_WIDTH ( AXI_DATA_WIDTH  )
+    , .READ_DIR       ( DIR__RIGHT      )
+    )
     u_axi_read_button
       ( .clk        ( clk                              )
       , .rst_n      ( rst_n                            )
@@ -167,6 +183,7 @@ module day10_input_reader
       , .data_in    ( buttons_data_in                  )
 
       , .ready      ( button_ready                     )
+      , .last       ( buttons_read_last                )
       , .vec        ( day10_input.buttons[button_iter] )
       );
 

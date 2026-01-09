@@ -3,6 +3,7 @@ SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
 VERILOG_SOURCES += $(CURDIR)/../../src/enumerate_solutions.sv \
+                   $(CURDIR)/../../src/axi_write_vector.sv \
                    $(CURDIR)/enumerate_solutions_tb.sv
 
 TOPLEVEL = enumerate_solutions_tb

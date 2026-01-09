@@ -21,7 +21,6 @@ module axi_write_vector
   typedef enum logic [1:0]
     { STATE__INIT
     , STATE__WRITE_CHUNK
-    , STATE__DONE
     } state_t;
 
   state_t state_now, state_next;
@@ -68,7 +67,7 @@ module axi_write_vector
 
   always_comb data_out.tdata = vec_padded[chunk_iter * AXI_DATA_WIDTH +: AXI_DATA_WIDTH];
 
-  assign ready = state_now == STATE__DONE;
+  assign ready = data_out.tvalid && data_out.tready && last_chunk;
 
   // state machine logic
 
@@ -76,14 +75,13 @@ module axi_write_vector
     case (state_now)
       STATE__INIT:
         if (start)
-          if (total_chunks == '0)                             state_next = STATE__DONE;
-          else                                                state_next = STATE__WRITE_CHUNK;
-        else                                                  state_next = STATE__INIT;
+          if (total_chunks == '0) state_next = STATE__INIT;
+          else                    state_next = STATE__WRITE_CHUNK;
+        else                      state_next = STATE__INIT;
       STATE__WRITE_CHUNK:
-        if (data_out.tvalid && data_out.tready && last_chunk) state_next = STATE__DONE;
-        else                                                  state_next = STATE__WRITE_CHUNK;
-      STATE__DONE:                                            state_next = STATE__INIT;
-      default:                                                state_next = STATE__INIT;
+        if (ready)                state_next = STATE__INIT;
+        else                      state_next = STATE__WRITE_CHUNK;
+      default:                    state_next = STATE__INIT;
     endcase
 
 endmodule
