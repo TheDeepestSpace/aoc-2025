@@ -1,5 +1,8 @@
 `default_nettype none
 
+`include "day10_input_if.svh"
+`include "day10_output_if.svh"
+
 module configure_machine
   #(parameter int unsigned MAX_NUM_LIGHTS
   , parameter int unsigned MAX_NUM_BUTTONS

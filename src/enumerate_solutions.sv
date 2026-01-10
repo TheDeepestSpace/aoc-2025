@@ -1,5 +1,7 @@
 `default_nettype none
 
+`include "axi_stream_if.svh"
+
 module enumerate_solutions
   #(parameter int unsigned MAX_ROWS
   , parameter int unsigned MAX_COLS

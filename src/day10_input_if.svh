@@ -1,5 +1,8 @@
 `default_nettype none
 
+`ifndef DAY10_INPUT_IF__HG
+`define DAY10_INPUT_IF__HG
+
 interface day10_input_if
   #(parameter int unsigned MAX_NUM_LIGHTS
   , parameter int unsigned MAX_NUM_BUTTONS
@@ -29,3 +32,5 @@ interface day10_input_if
     );
 
 endinterface
+
+`endif

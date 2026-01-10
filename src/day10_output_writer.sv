@@ -1,3 +1,7 @@
+`include "axi_stream_if.svh"
+`include "day10_input_if.svh"
+`include "day10_output_if.svh"
+
 module day10_output_writer
   #(parameter int unsigned MAX_NUM_BUTTONS
   , parameter int unsigned MAX_NUM_BUTTONS_W =

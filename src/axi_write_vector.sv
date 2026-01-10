@@ -1,3 +1,5 @@
+`include "axi_stream_if.svh"
+
 module axi_write_vector
   #(parameter int unsigned MAX_VEC_LENGTH
   , parameter int unsigned AXI_DATA_WIDTH

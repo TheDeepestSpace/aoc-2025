@@ -1,3 +1,5 @@
+`include "axi_stream_if.svh"
+
 module day10
   #(parameter int unsigned MAX_NUM_LIGHTS
   , parameter int unsigned MAX_NUM_BUTTONS

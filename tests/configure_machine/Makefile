@@ -5,8 +5,8 @@ TOPLEVEL_LANG ?= verilog
 VERILOG_SOURCES += $(CURDIR)/../../src/axi_stream_if.svh \
                    $(CURDIR)/../../src/axi_read_vector.sv \
                    $(CURDIR)/../../src/axi_write_vector.sv \
-                   $(CURDIR)/../../src/day10_input.sv \
-                   $(CURDIR)/../../src/day10_output.sv \
+                   $(CURDIR)/../../src/day10_input_if.svh \
+                   $(CURDIR)/../../src/day10_output_if.svh \
                    $(CURDIR)/../../src/popcount.sv \
                    $(CURDIR)/../../src/popcount_chain.sv \
                    $(CURDIR)/../../src/enumerate_solutions.sv \

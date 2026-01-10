@@ -1,3 +1,6 @@
+`ifndef DAY10_OUTPUT_IF__HG
+`define DAY10_OUTPUT_IF__HG
+
 interface day10_output_if
   #(parameter int unsigned MAX_NUM_BUTTONS
   , parameter int unsigned MAX_NUM_BUTTONS_W =
@@ -19,3 +22,5 @@ interface day10_output_if
     );
 
 endinterface
+
+`endif

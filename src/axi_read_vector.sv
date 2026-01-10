@@ -1,3 +1,5 @@
+`include "axi_stream_if.svh"
+
 typedef enum logic [0:0] { DIR__LEFT, DIR__RIGHT } dir_e;
 
 module axi_read_vector
