@@ -188,7 +188,9 @@ module enumerate_solutions
             /* verilator lint_off SELRANGE */
             else if (r < rows && pivot_valid[r])
             /* verilator lint_on SELRANGE */
+            /* verilator lint_off SELRANGE */
               bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][pivot_var] = RREF[r][c +1];
+            /* verilator lint_on SELRANGE */
             else if (r >= rows) /* implicit row condition */
               bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
                 bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
