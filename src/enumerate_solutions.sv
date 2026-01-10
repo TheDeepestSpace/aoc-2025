@@ -135,10 +135,14 @@ module enumerate_solutions
   logic [MAX_ROWS -1:0]        x0_rows [MAX_VARS_COUNT -1:0];
 
   for (genvar c = MAX_VARS_COUNT -1; c >= 0; c--) begin: l_build_vase_solution_cols
+    logic [MAX_VARS_INDEX_W-1:0] v;
+
+    assign v = MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 - c);
+
     for (genvar r = 0; r < MAX_ROWS_VARS; r++) begin: l_build_base_solution_rows
       always_comb
         if (c + 1 > col_rhs_idx && r < rows)
-          if (pivot_valid[r] && pivot_col[r] == MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 - c))
+          if (pivot_valid[r] && pivot_col[r] == v)
             x0_rows[c][r] = RREF[r][col_rhs_idx];
           else
             x0_rows[c][r] = 1'b0;
@@ -165,6 +169,12 @@ module enumerate_solutions
 
   for (genvar c = MAX_VARS_COUNT - 1; c >= 0; c--) begin: l_build_bases_col
     for (genvar r = 0; r < MAX_VARS_COUNT; r++) begin: l_build_bases_row
+      logic [MAX_VARS_INDEX_W-1:0] pivot_var;
+
+      /* verilator lint_off SELRANGE */
+      assign pivot_var = MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 -pivot_col[r]);
+      /* verilator lint_on SELRANGE */
+
       always_comb
         if (state_now == STATE__INIT)
           bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = '0;
@@ -176,12 +186,7 @@ module enumerate_solutions
             /* verilator lint_off SELRANGE */
             else if (r < rows && pivot_valid[r])
             /* verilator lint_on SELRANGE */
-              bases
-                [bases_iter_chain[MAX_VARS_COUNT -1 - c]]
-                  /* verilator lint_off SELRANGE */
-                  [MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 -pivot_col[r])] =
-                    RREF[r][c +1];
-                  /* verilator lint_on SELRANGE */
+              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][pivot_var] = RREF[r][c +1];
             else if (r >= rows) /* implicit row condition */
               bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
                 bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
