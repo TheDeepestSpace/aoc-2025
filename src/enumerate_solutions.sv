@@ -57,7 +57,7 @@ module enumerate_solutions
   localparam int unsigned MAX_ROWS_VARS = (MAX_ROWS < MAX_VARS_COUNT) ? MAX_ROWS : MAX_VARS_COUNT;
 
   for (genvar r = 0; r < MAX_ROWS; r++) begin: l_pivot_scan_row
-    for (genvar c = MAX_VARS_COUNT -1; c > 0; c--) begin: l_pivot_scan_col
+    for (genvar c = MAX_VARS_COUNT -1; c >= 0; c--) begin: l_pivot_scan_col
       if (c == MAX_VARS_COUNT -1) begin: l_leading_column_special_case
         always_comb row_pivots[c][r] = RREF[r][c +1];
       end else begin: l_following_columns
@@ -70,7 +70,7 @@ module enumerate_solutions
     end
   end
 
-  for (genvar c = MAX_VARS_COUNT -1; c > 0; c--) begin: l_build_pivot_mask
+  for (genvar c = MAX_VARS_COUNT -1; c >= 0; c--) begin: l_build_pivot_mask
     always_comb
       if (c + 1 > col_rhs_idx)
         pivot_mask[c] = |row_pivots[c];
