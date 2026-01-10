@@ -91,12 +91,12 @@ class MachineConfigurationData:
             min_button_presses=min_button_presses, buttons_to_press=buttons_to_press
         )
 
-def print_configuration(num: int, md: MachineData, mdc: MachineConfigurationData):
+def analyse_configuration(num: int, md: MachineData, mdc: MachineConfigurationData):
     num_lights = len(md.target_lights_arrangement)
     expected = "".join("#" if light_on else "." for light_on in md.target_lights_arrangement)
     print(f"[machine {num}] expected:")
     print(f"[machine {num}] [{expected}]")
-    print(f"[machine {num}] configuring:")
+    print(f"[machine {num}] configuring: (in {mdc.min_button_presses} button presses)")
     lights = [False] * num_lights
     print(f"[machine {num}] [" + "." * num_lights + "]")
     for idx, should_press in enumerate(mdc.buttons_to_press):
@@ -108,12 +108,19 @@ def print_configuration(num: int, md: MachineData, mdc: MachineConfigurationData
     print(f"[machine {num}] done configuring")
     print(f"[machine {num}] lights match target arrangement: {lights == md.target_lights_arrangement}")
 
+    return lights == md.target_lights_arrangement
+
 async def control(input_file: str, send: Callable[[bytes], Awaitable[bytes]]) -> None:
     with open(input_file, "r", encoding="utf-8") as f:
         mds = [MachineData.from_input_string(input_line) for input_line in f]
         axi_data_in = b"".join(md.to_axi_string() for md in mds)
 
     axi_data_out = bytearray(await send(axi_data_in))
+
+    all_good = True
+
     for idx, md in enumerate(mds):
         mdc = MachineConfigurationData.from_axi_string(md, axi_data_out)
-        print_configuration(idx + 1, md, mdc)
+        all_good &= analyse_configuration(idx + 1, md, mdc)
+
+    return all_good

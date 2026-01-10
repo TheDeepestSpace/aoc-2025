@@ -43,4 +43,6 @@ async def day10_integration(dut):
         frame = await with_timeout(sink.recv(), 100, "us")
         return bytes(frame.tdata)
 
-    await controller.control(input_path, send)
+    is_all_good = await controller.control(input_path, send)
+
+    assert is_all_good

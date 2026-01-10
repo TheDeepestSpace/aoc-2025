@@ -178,16 +178,18 @@ module day10_input_reader
     , .READ_DIR       ( DIR__RIGHT      )
     )
     u_axi_read_button
-      ( .clk        ( clk                              )
-      , .rst_n      ( rst_n                            )
+      ( .clk        ( clk                                 )
+      , .rst_n      ( rst_n                               )
 
-      , .start      ( buttons_read_start               )
-      , .vec_length ( day10_input.num_lights           )
-      , .data_in    ( buttons_data_in                  )
+      , .start      ( buttons_read_start                  )
+      , .vec_length ( day10_input.num_lights              )
+      , .data_in    ( buttons_data_in                     )
 
-      , .ready      ( button_ready                     )
-      , .last       ( buttons_read_last                )
-      , .vec        ( day10_input.buttons[button_iter] )
+      , .ready      ( button_ready                        )
+      , .last       ( buttons_read_last                   )
+
+      // temporary hack; will probaby need to allow readers for another clock cycle
+      , .vec        ( day10_input.buttons[button_iter -1] )
       );
 
 
