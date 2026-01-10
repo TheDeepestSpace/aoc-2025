@@ -60,14 +60,16 @@ module configure_machine
     end
   end
 
-  for (genvar l = 0; l < MAX_AUG_MAT_ROWS; l++) begin: l_build_aug_mat_last_col
+  logic [MAX_AUG_MAT_COLS_W-1:0] rhs_col_idx;
+
+  assign rhs_col_idx = MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons);
+
+  for (genvar l = 0; l < MAX_AUG_MAT_ROWS; l++) begin: l_build_aug_mat_rhs_col
     always_comb
       if (l < day10_input.num_lights)
-        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons)] =
-          day10_input.target_lights_arrangement[l];
+        augmented_matrix[l][rhs_col_idx] = day10_input.target_lights_arrangement[l];
       else
-        augmented_matrix[l][MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons)] =
-          'x;
+        augmented_matrix[l][rhs_col_idx] = 'x;
   end
 
   // compute RREF
