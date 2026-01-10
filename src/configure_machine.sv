@@ -55,20 +55,26 @@ module configure_machine
 
   for (genvar r = 0; r < MAX_AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
     for (genvar c = 0; c < MAX_AUG_MAT_COLS; c++) begin: l_build_aug_mat_cols
-      localparam [MAX_NUM_BUTTONS_W -1:0] BUTTON_IDX = MAX_NUM_BUTTONS_W'(MAX_AUG_MAT_COLS - 1 - c);
-
-      always_comb
-        if (r < day10_input.num_lights)
-          if (c == rhs_col_idx)
-            augmented_matrix[r][c] = day10_input.target_lights_arrangement[r];
-          /* verilator lint_off CMPCONST */ /* harmless here, but can fix via compile-time if */
-          else if (BUTTON_IDX < day10_input.num_buttons)
-          /* verilator lint_on CMPCONST */
-            augmented_matrix[r][c] = day10_input.buttons[BUTTON_IDX][r];
+      if ((MAX_AUG_MAT_COLS - 1 - c) < MAX_NUM_BUTTONS) begin: l_aug_btn
+        always_comb begin
+          if (r < day10_input.num_lights)
+            if (c == rhs_col_idx)
+              augmented_matrix[r][c] = day10_input.target_lights_arrangement[r];
+            else if ((MAX_AUG_MAT_COLS - 1 - c) < day10_input.num_buttons)
+              augmented_matrix[r][c] = day10_input.buttons[MAX_AUG_MAT_COLS - 1 - c][r];
+            else
+              augmented_matrix[r][c] = 'x;
           else
             augmented_matrix[r][c] = 'x;
-        else
-          augmented_matrix[r][c] = 'x;
+        end
+      end else begin: l_aug_pad
+        always_comb begin
+          if (r < day10_input.num_lights && c == rhs_col_idx)
+            augmented_matrix[r][c] = day10_input.target_lights_arrangement[r];
+          else
+            augmented_matrix[r][c] = 'x;
+        end
+      end
     end
   end
 
