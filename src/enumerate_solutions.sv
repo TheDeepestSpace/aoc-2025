@@ -169,67 +169,34 @@ module enumerate_solutions
     , .chain ( bases_iter_chain )
     );
 
-  for (genvar c = MAX_VARS_COUNT - 1; c >= 0; c--) begin: l_build_bases_col
-    for (genvar r = 0; r < MAX_VARS_COUNT; r++) begin: l_build_bases_row
-      logic [MAX_VARS_INDEX_W-1:0] pivot_var;
-
-      /* verilator lint_off SELRANGE */
-      assign pivot_var = MAX_VARS_INDEX_W'(MAX_VARS_COUNT -1 -pivot_col[r]);
-      /* verilator lint_on SELRANGE */
-
-      always_comb
-        if (state_now == STATE__INIT)
-          bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = '0;
-        else if (c + 1 > col_rhs_idx)
-          if (state_now == STATE__INIT) bases[c][MAX_VARS_COUNT -1 - r] = '0;
-          else if (free_vars_mask[c] != '0)
-            if (r == MAX_VARS_COUNT -1 - c)
-              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = 1'b1;
-            /* verilator lint_off SELRANGE */
-            else if (r < rows && pivot_valid[r])
-            /* verilator lint_on SELRANGE */
-            /* verilator lint_off SELRANGE */
-              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][pivot_var] = RREF[r][c +1];
-            /* verilator lint_on SELRANGE */
-            else if (r >= rows) /* implicit row condition */
-              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
-                bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
-            else
-              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] = 1'b0;
-          else
-            bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
-              bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
-        else
-          bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r] =
-            bases[bases_iter_chain[MAX_VARS_COUNT -1 - c]][MAX_VARS_COUNT -1 - r];
+  // had to give up on "no fors in always_comb" on this one as it would just be too hard to avoid
+  // the multi-driver issues with generated-for loops; i think i could eventually pull of building
+  // up the vecotrs more explicitly
+  always_ff @ (posedge clk)
+    if (!rst_n) begin
+      for (int bi = 0; bi < MAX_VARS_COUNT; bi++)
+        bases[bi] <= '0;
+    end else if (state_now == STATE__INIT) begin
+      for (int bi = 0; bi < MAX_VARS_COUNT; bi++)
+        bases[bi] <= '0;
+    end else begin
+      for (int c = 0; c < MAX_VARS_COUNT; c++) begin
+        if (c + 1 > col_rhs_idx && free_vars_mask[c]) begin
+          for (int r = 0; r < MAX_VARS_COUNT; r++) begin
+            if (r == MAX_VARS_COUNT - 1 - c) begin
+              bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]][MAX_VARS_COUNT - 1 - r] <= 1'b1;
+            end else if (r < rows && pivot_valid[r]) begin
+              /* verilator lint_off SELRANGE */
+              bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]]
+                   [MAX_VARS_INDEX_W'(MAX_VARS_COUNT - 1) - pivot_col[r]] <= RREF[r][c + 1];
+              /* verilator lint_on SELRANGE */
+            end else if (r < rows) begin
+              bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]][MAX_VARS_COUNT - 1 - r] <= 1'b0;
+            end
+          end
+        end
+      end
     end
-  end
-
-  // always_ff @ (posedge clk)
-  //   if (!rst_n) begin
-  //     for (int bi = 0; bi < MAX_VARS_COUNT; bi++)
-  //       bases[bi] <= '0;
-  //   end else if (state_now == STATE__INIT) begin
-  //     for (int bi = 0; bi < MAX_VARS_COUNT; bi++)
-  //       bases[bi] <= '0;
-  //   end else begin
-  //     for (int c = 0; c < MAX_VARS_COUNT; c++) begin
-  //       if (c + 1 > col_rhs_idx && free_vars_mask[c]) begin
-  //         for (int r = 0; r < MAX_VARS_COUNT; r++) begin
-  //           if (r == MAX_VARS_COUNT - 1 - c) begin
-  //             bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]][MAX_VARS_COUNT - 1 - r] <= 1'b1;
-  //           end else if (r < rows && pivot_valid[r]) begin
-  //             /* verilator lint_off SELRANGE */
-  //             bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]]
-  //                  [MAX_VARS_INDEX_W'(MAX_VARS_COUNT - 1) - pivot_col[r]] <= RREF[r][c + 1];
-  //             /* verilator lint_on SELRANGE */
-  //           end else if (r < rows) begin
-  //             bases[bases_iter_chain[MAX_VARS_COUNT - 1 - c]][MAX_VARS_COUNT - 1 - r] <= 1'b0;
-  //           end
-  //         end
-  //       end
-  //     end
-  //   end
 
   // solution iterator
 
