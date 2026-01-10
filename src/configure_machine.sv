@@ -48,28 +48,26 @@ module configure_machine
   localparam int unsigned MAX_AUG_MAT_COLS_W =
     MAX_AUG_MAT_COLS <= 1 ? 1 : $clog2(MAX_AUG_MAT_COLS);
 
-  logic [MAX_AUG_MAT_COLS -1:0] augmented_matrix [MAX_AUG_MAT_ROWS -1:0];
-
-  for (genvar r = 0; r < MAX_AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
-    for (genvar c = MAX_AUG_MAT_COLS -1; c >= 1; c--) begin: l_build_aug_mat_rows
-      always_comb
-        if (r < day10_input.num_lights && MAX_AUG_MAT_COLS -1 -c < day10_input.num_buttons)
-          augmented_matrix[r][c] = day10_input.buttons[MAX_AUG_MAT_COLS -1 - c][r];
-        else
-          augmented_matrix[r][c] = 'x;
-    end
-  end
-
-  logic [MAX_AUG_MAT_COLS_W-1:0] rhs_col_idx;
+  logic [MAX_AUG_MAT_COLS -1:0]   augmented_matrix [MAX_AUG_MAT_ROWS -1:0];
+  logic [MAX_AUG_MAT_COLS_W -1:0] rhs_col_idx;
 
   assign rhs_col_idx = MAX_AUG_MAT_COLS_W'(MAX_AUG_MAT_COLS -1 - day10_input.num_buttons);
 
-  for (genvar l = 0; l < MAX_AUG_MAT_ROWS; l++) begin: l_build_aug_mat_rhs_col
-    always_comb
-      if (l < day10_input.num_lights)
-        augmented_matrix[l][rhs_col_idx] = day10_input.target_lights_arrangement[l];
-      else
-        augmented_matrix[l][rhs_col_idx] = 'x;
+  for (genvar r = 0; r < MAX_AUG_MAT_ROWS; r++) begin: l_build_aug_mat_rows
+    for (genvar c = 0; c < MAX_AUG_MAT_COLS; c++) begin: l_build_aug_mat_cols
+      always_comb
+        if (r < day10_input.num_lights)
+          if (c == rhs_col_idx)
+            augmented_matrix[r][c] = day10_input.target_lights_arrangement[r];
+          /* verilator lint_off CMPCONST */ /* harmless here, but can fix via compile-time if */
+          else if (MAX_NUM_BUTTONS_W'(MAX_AUG_MAT_COLS - 1 - c) < day10_input.num_buttons)
+          /* verilator lint_on CMPCONST */
+            augmented_matrix[r][c] = day10_input.buttons[MAX_AUG_MAT_COLS - 1 - c][r];
+          else
+            augmented_matrix[r][c] = 'x;
+        else
+          augmented_matrix[r][c] = 'x;
+    end
   end
 
   // compute RREF
