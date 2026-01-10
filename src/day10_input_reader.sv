@@ -45,9 +45,11 @@ module day10_input_reader
 
   assign lights_data_in.tvalid = data_in.tvalid;
   assign lights_data_in.tdata  = data_in.tdata;
+  assign lights_data_in.tlast  = data_in.tlast;
 
   assign buttons_data_in.tvalid = data_in.tvalid;
   assign buttons_data_in.tdata  = data_in.tdata;
+  assign buttons_data_in.tlast  = data_in.tlast;
 
   always_comb
     case (state_now)
