@@ -101,7 +101,8 @@ module axi_read_vector
 
   // reader readiness
 
-  assign ready = state_now == STATE__READ_CHUNK && chunk_iter == chunk_iter_end && data_in.tvalid;
+  always_ff @ (posedge clk)
+    ready <= state_now == STATE__READ_CHUNK && chunk_iter == chunk_iter_end && data_in.tvalid;
 
   // state machine logic
 

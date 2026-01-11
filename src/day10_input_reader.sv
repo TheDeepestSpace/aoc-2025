@@ -27,6 +27,7 @@ module day10_input_reader
     { STATE__INIT
     , STATE__READ_LIGHTS_COUNT
     , STATE__READ_TARGET_LIGHTS_ARRANGEMENT
+    , STATE__READ_TARGET_LIGHTS_ARRANGEMENT_WAIT
     , STATE__READ_BUTTON_COUNT
     , STATE__READ_BUTTON
     , STATE__READER_READY
@@ -53,10 +54,14 @@ module day10_input_reader
 
   always_comb
     case (state_now)
-      STATE__READ_LIGHTS_COUNT, STATE__READ_BUTTON_COUNT: data_in.tready = 1'b1;
-      STATE__READ_TARGET_LIGHTS_ARRANGEMENT:              data_in.tready = lights_data_in.tready;
-      STATE__READ_BUTTON:                                 data_in.tready = buttons_data_in.tready;
-      default:                                            data_in.tready = '0;
+      STATE__READ_LIGHTS_COUNT, STATE__READ_BUTTON_COUNT:
+        data_in.tready = 1'b1;
+      STATE__READ_TARGET_LIGHTS_ARRANGEMENT, STATE__READ_TARGET_LIGHTS_ARRANGEMENT_WAIT:
+        data_in.tready = lights_data_in.tready;
+      STATE__READ_BUTTON:
+        data_in.tready = buttons_data_in.tready;
+      default:
+        data_in.tready = '0;
     endcase
 
   // consumer readiness
@@ -150,8 +155,10 @@ module day10_input_reader
   logic button_ready;
 
   logic [MAX_NUM_BUTTONS_W -1:0] button_iter;
+  logic [MAX_NUM_LIGHTS -1:0] button_vec;
 
-  assign buttons_read_start = state_now == STATE__READ_BUTTON;
+  assign buttons_read_start =
+    state_now == STATE__READ_BUTTON && button_iter != day10_input.num_buttons - 1;
 
   assign buttons_read_completed = button_ready && button_iter == day10_input.num_buttons - 1;
 
@@ -190,10 +197,20 @@ module day10_input_reader
       , .ready      ( button_ready                        )
       , .last       ( buttons_read_last                   )
 
-      // temporary hack; will probaby need to allow readers for another clock cycle
-      , .vec        ( day10_input.buttons[button_iter -1] )
+      , .vec        ( button_vec                          )
       );
 
+  // latch buttons on read to avoid inferred latches from assigning to combinational `.vec` output
+  // of `axi_read_vector`
+  for (genvar i = 0; i < MAX_NUM_BUTTONS; i++) begin: l_store_buttons
+    always_ff @ (posedge clk)
+      if (!rst_n)
+        day10_input.buttons[i] <= '0;
+      else if (button_ready && button_iter == i)
+        day10_input.buttons[i] <= button_vec;
+      else
+        day10_input.buttons[i] <= day10_input.buttons[i];
+  end
 
   // state machine logic
 
@@ -209,11 +226,11 @@ module day10_input_reader
           state_next = STATE__READ_TARGET_LIGHTS_ARRANGEMENT;
         else
           state_next = STATE__READ_LIGHTS_COUNT;
-      STATE__READ_TARGET_LIGHTS_ARRANGEMENT:
+      STATE__READ_TARGET_LIGHTS_ARRANGEMENT, STATE__READ_TARGET_LIGHTS_ARRANGEMENT_WAIT:
         if (target_lights_arrangement_read_completed)
           state_next = STATE__READ_BUTTON_COUNT;
         else
-          state_next = STATE__READ_TARGET_LIGHTS_ARRANGEMENT;
+          state_next = STATE__READ_TARGET_LIGHTS_ARRANGEMENT_WAIT;
       STATE__READ_BUTTON_COUNT:
         if (button_count_read_completed)
           state_next = STATE__READ_BUTTON;

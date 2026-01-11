@@ -32,6 +32,7 @@ module configure_machine
     , STATE__READ_SOLUTION_START
     , STATE__READ_SOLUTION_WAIT
     , STATE__PROCESS_SOLUTION
+    , STATE__PROCESS_LAST_SOLUTION
     , STATE__DONE
     } state_t;
 
@@ -182,7 +183,7 @@ module configure_machine
     else if (state_now == STATE__INIT)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
-    else if (state_now == STATE__PROCESS_SOLUTION
+    else if ((state_now == STATE__PROCESS_SOLUTION || state_now == STATE__PROCESS_LAST_SOLUTION)
               && current_solution_popcount < day10_output.min_button_presses)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {current_solution_popcount, current_solution};
@@ -210,11 +211,12 @@ module configure_machine
         if (rref_ready)             state_next = STATE__READ_SOLUTION_START;
         else                        state_next = STATE__WAIT_COMPUTE_RREF;
       STATE__READ_SOLUTION_START, STATE__READ_SOLUTION_WAIT:
-        if (solution_read_complete) state_next = STATE__PROCESS_SOLUTION;
+        if (solution_read_complete)
+          if (solution_read_last)   state_next = STATE__PROCESS_LAST_SOLUTION;
+          else                      state_next = STATE__PROCESS_SOLUTION;
         else                        state_next = STATE__READ_SOLUTION_WAIT;
-      STATE__PROCESS_SOLUTION:
-        if (solution_read_last)     state_next = STATE__DONE;
-        else                        state_next = STATE__READ_SOLUTION_START;
+      STATE__PROCESS_SOLUTION:      state_next = STATE__READ_SOLUTION_START;
+      STATE__PROCESS_LAST_SOLUTION: state_next = STATE__DONE;
       STATE__DONE:
         if (accepted)               state_next = STATE__INIT;
         else                        state_next = STATE__DONE;
