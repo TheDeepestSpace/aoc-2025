@@ -26,21 +26,33 @@ module configure_machine
   // state declarations
 
   typedef enum logic [2:0]
-    { STATE__INIT
-    , STATE__START_COMPUTE_RREF
-    , STATE__WAIT_COMPUTE_RREF
-    , STATE__READ_SOLUTION_START
-    , STATE__READ_SOLUTION_WAIT
-    , STATE__PROCESS_SOLUTION
-    , STATE__PROCESS_LAST_SOLUTION
-    , STATE__DONE
-    } state_t;
+    { RREF_STAGE_STATE__INIT
+    , RREF_STAGE_STATE__START_COMPUTE_RREF
+    , RREF_STAGE_STATE__WAIT_COMPUTE_RREF
+    , RREF_STAGE_STATE__STORE_RREF
+    , RREF_STAGE_STATE__DONE
+    } rref_stage_state_t;
 
-  state_t state_now, state_next;
+  typedef enum logic [2:0]
+    { ENUM_STAGE_STATE__INIT
+    , ENUM_STAGE_STATE__START
+    , ENUM_STAGE_STATE__READ_SOLUTION_START
+    , ENUM_STAGE_STATE__READ_SOLUTION_WAIT
+    , ENUM_STAGE_STATE__PROCESS_SOLUTION
+    , ENUM_STAGE_STATE__PROCESS_LAST_SOLUTION
+    , ENUM_STAGE_STATE__DONE
+    } enum_stage_state_t;
+
+  rref_stage_state_t rref_stage_state_now, rref_stage_state_next;
+  enum_stage_state_t enum_stage_state_now, enum_stage_state_next;
 
   always_ff @ (posedge clk)
-    if (!rst_n) state_now <= STATE__INIT;
-    else        state_now <= state_next;
+    if (!rst_n) rref_stage_state_now <= RREF_STAGE_STATE__INIT;
+    else        rref_stage_state_now <= rref_stage_state_next;
+
+  always_ff @ (posedge clk)
+    if (!rst_n) enum_stage_state_now <= ENUM_STAGE_STATE__INIT;
+    else        enum_stage_state_now <= enum_stage_state_next;
 
   // construct augmented matrix
 
@@ -85,8 +97,8 @@ module configure_machine
   logic [MAX_AUG_MAT_COLS -1:0] rref [MAX_AUG_MAT_ROWS -1:0];
 
   always_ff @ (posedge clk)
-    if (state_now == STATE__START_COMPUTE_RREF) rref_start <= 1'b1;
-    else                                        rref_start <= '0;
+    if (rref_stage_state_now == RREF_STAGE_STATE__START_COMPUTE_RREF) rref_start <= 1'b1;
+    else                                                              rref_start <= '0;
 
   gf2_rref
     #(.MAX_ROWS ( MAX_AUG_MAT_ROWS )
@@ -106,15 +118,57 @@ module configure_machine
       , .RREF  ( rref                        )
       );
 
+  // enumeration management
+
+  logic stored_rref_busy;
+
+  always_ff @ (posedge clk)
+    if (!rst_n)                  stored_rref_busy <= '0;
+    else
+      case (enum_stage_state_now)
+        ENUM_STAGE_STATE__INIT:  stored_rref_busy <= '0;
+        ENUM_STAGE_STATE__START: stored_rref_busy <= 1'b1;
+        default:                 stored_rref_busy <= stored_rref_busy;
+      endcase
+
+  // store rref for enumeration stage
+
+  logic [MAX_AUG_MAT_COLS -1:0] stored_rref [MAX_AUG_MAT_ROWS -1:0];
+  logic                         stored_rref_complete;
+
+  always_ff @ (posedge clk)
+    if (!rst_n)                 stored_rref <= '{default:'0};
+    else
+      case (rref_stage_state_now)
+        RREF_STAGE_STATE__STORE_RREF:
+          if(!stored_rref_busy) stored_rref <= rref;
+          else                  stored_rref <= stored_rref;
+        default:                stored_rref <= stored_rref;
+      endcase
+
+  always_ff @ (posedge clk)
+    if (!rst_n) stored_rref_complete <= '0;
+    else
+      case (rref_stage_state_now)
+        RREF_STAGE_STATE__INIT:  stored_rref_complete <= '0;
+        RREF_STAGE_STATE__STORE_RREF:
+          if (!stored_rref_busy) stored_rref_complete <= 1'b1;
+          else                   stored_rref_complete <= stored_rref_complete;
+        default:                 stored_rref_complete <= stored_rref_complete;
+      endcase
+
   // enumerate solutions
 
   logic enumerate_solutions_start;
   axi_stream_if #( AXI_DATA_WIDTH ) solution_stream();
 
   always_ff @ (posedge clk)
-    if (!rst_n)                                       enumerate_solutions_start <= '0;
-    else if (state_now == STATE__READ_SOLUTION_START) enumerate_solutions_start <= 1'b1;
-    else                                              enumerate_solutions_start <= '0;
+    if (!rst_n)
+      enumerate_solutions_start <= '0;
+    else if (enum_stage_state_now == ENUM_STAGE_STATE__START)
+      enumerate_solutions_start <= 1'b1;
+    else
+      enumerate_solutions_start <= '0;
 
   enumerate_solutions
     #(.MAX_ROWS       ( MAX_AUG_MAT_ROWS )
@@ -142,7 +196,7 @@ module configure_machine
 
   logic [MAX_NUM_BUTTONS -1:0] current_solution;
 
-  assign solution_read_start = state_now == STATE__READ_SOLUTION_START;
+  assign solution_read_start = enum_stage_state_now == ENUM_STAGE_STATE__READ_SOLUTION_START;
 
   axi_read_vector
     #(.MAX_VEC_LENGTH ( MAX_NUM_BUTTONS )
@@ -180,10 +234,11 @@ module configure_machine
     if (!rst_n)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
-    else if (state_now == STATE__INIT)
+    else if (enum_stage_state_now == ENUM_STAGE_STATE__INIT)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {{MAX_NUM_PRESSES_W{1'b1}}, {MAX_NUM_BUTTONS{1'b0}}};
-    else if ((state_now == STATE__PROCESS_SOLUTION || state_now == STATE__PROCESS_LAST_SOLUTION)
+    else if ((enum_stage_state_now == ENUM_STAGE_STATE__PROCESS_SOLUTION
+              || enum_stage_state_now == ENUM_STAGE_STATE__PROCESS_LAST_SOLUTION)
               && current_solution_popcount < day10_output.min_button_presses)
       {day10_output.min_button_presses, day10_output.buttons_to_press} <=
         {current_solution_popcount, current_solution};
@@ -194,33 +249,54 @@ module configure_machine
   // completion check
 
   always_ff @ (posedge clk)
-    if (state_now == STATE__DONE) ready <= 1'b1;
-    else                          ready <= '0;
+    if (enum_stage_state_now == ENUM_STAGE_STATE__DONE) ready <= 1'b1;
+    else                                                ready <= '0;
 
   // state machine logic
 
   always_comb
-    case (state_now)
-      STATE__INIT:
-        if (start)                  state_next = STATE__START_COMPUTE_RREF;
-        else                        state_next = STATE__INIT;
-      STATE__START_COMPUTE_RREF:
-        if (rref_ready)             state_next = STATE__READ_SOLUTION_START;
-        else                        state_next = STATE__WAIT_COMPUTE_RREF;
-      STATE__WAIT_COMPUTE_RREF:
-        if (rref_ready)             state_next = STATE__READ_SOLUTION_START;
-        else                        state_next = STATE__WAIT_COMPUTE_RREF;
-      STATE__READ_SOLUTION_START, STATE__READ_SOLUTION_WAIT:
+    case (rref_stage_state_now)
+      RREF_STAGE_STATE__INIT:
+        if (start)                  rref_stage_state_next = RREF_STAGE_STATE__START_COMPUTE_RREF;
+        else                        rref_stage_state_next = RREF_STAGE_STATE__INIT;
+      RREF_STAGE_STATE__START_COMPUTE_RREF, RREF_STAGE_STATE__WAIT_COMPUTE_RREF:
+        if (rref_ready)             rref_stage_state_next = RREF_STAGE_STATE__STORE_RREF;
+        else                        rref_stage_state_next = RREF_STAGE_STATE__WAIT_COMPUTE_RREF;
+      RREF_STAGE_STATE__STORE_RREF:
+        if (stored_rref_busy)       rref_stage_state_next = RREF_STAGE_STATE__STORE_RREF;
+        else                        rref_stage_state_next = RREF_STAGE_STATE__DONE;
+      RREF_STAGE_STATE__DONE:       rref_stage_state_next = RREF_STAGE_STATE__INIT;
+      default:                      rref_stage_state_next = RREF_STAGE_STATE__INIT;
+    endcase
+
+  always_comb
+    case (enum_stage_state_now)
+      ENUM_STAGE_STATE__INIT:
+        if (rref_ready)
+          enum_stage_state_next = ENUM_STAGE_STATE__START;
+        else
+          enum_stage_state_next = ENUM_STAGE_STATE__INIT;
+      ENUM_STAGE_STATE__START:
+        enum_stage_state_next = ENUM_STAGE_STATE__READ_SOLUTION_START;
+      ENUM_STAGE_STATE__READ_SOLUTION_START, ENUM_STAGE_STATE__READ_SOLUTION_WAIT:
         if (solution_read_complete)
-          if (solution_read_last)   state_next = STATE__PROCESS_LAST_SOLUTION;
-          else                      state_next = STATE__PROCESS_SOLUTION;
-        else                        state_next = STATE__READ_SOLUTION_WAIT;
-      STATE__PROCESS_SOLUTION:      state_next = STATE__READ_SOLUTION_START;
-      STATE__PROCESS_LAST_SOLUTION: state_next = STATE__DONE;
-      STATE__DONE:
-        if (accepted)               state_next = STATE__INIT;
-        else                        state_next = STATE__DONE;
-      default:                      state_next = STATE__INIT;
+          if (solution_read_last)
+            enum_stage_state_next = ENUM_STAGE_STATE__PROCESS_LAST_SOLUTION;
+          else
+            enum_stage_state_next = ENUM_STAGE_STATE__PROCESS_SOLUTION;
+        else
+          enum_stage_state_next = ENUM_STAGE_STATE__READ_SOLUTION_WAIT;
+      ENUM_STAGE_STATE__PROCESS_SOLUTION:
+        enum_stage_state_next = ENUM_STAGE_STATE__READ_SOLUTION_START;
+      ENUM_STAGE_STATE__PROCESS_LAST_SOLUTION:
+        enum_stage_state_next = ENUM_STAGE_STATE__DONE;
+      ENUM_STAGE_STATE__DONE:
+        if (accepted)
+          enum_stage_state_next = ENUM_STAGE_STATE__INIT;
+        else
+          enum_stage_state_next = ENUM_STAGE_STATE__DONE;
+      default:
+        enum_stage_state_next = ENUM_STAGE_STATE__INIT;
     endcase
 
 endmodule
