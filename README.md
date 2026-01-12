@@ -1,3 +1,5 @@
+[![CI](https://github.com/TheDeepestSpace/aoc-2025/actions/workflows/ci.yaml/badge.svg)](https://github.com/TheDeepestSpace/aoc-2025/actions/workflows/ci.yaml)
+
 ## Advent of Code 2025 -- Day 10 solution
 
 This repo contains SystemVerilog implementation for [Day 10 of Advent of Code

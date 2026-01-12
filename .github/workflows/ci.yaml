@@ -1,4 +1,4 @@
-name: AOC 2025 CI
+name: CI
 
 on:
   pull_request:
