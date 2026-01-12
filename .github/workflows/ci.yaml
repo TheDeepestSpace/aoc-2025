@@ -72,6 +72,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Temporary hack to install necessary python deps
+        run: pip3 install cocotb~=1.9 cocotb-test cocotbext-axi pytest
+
       - name: Unit test
         run: make test
 
