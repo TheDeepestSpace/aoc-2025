@@ -1,7 +1,8 @@
 ## Advent of Code 2025 -- Day 10 solution
 
-This repo contains SystemVerilog implementation for Day 10 of Advent of Code 2025. It is implemented
-as an acceperator, with structured input fed from controller. High-level architecture is as follows:
+This repo contains SystemVerilog implementation for [Day 10 of Advent of Code
+2025](https://adventofcode.com/2025/day/10). It is implemented as an acceperator, with structured
+input fed from a controller. High-level architecture is as follows:
 
 ```mermaid
 flowchart TB
@@ -32,31 +33,36 @@ flowchart TB
 
 The crux of the problem is representing the input buttons as an augmented matrix of binary elements
 with columns being "buttons" (or, rather, thier effect on the lights of the machine), RHS being the
-target arrangement of the lights. The augmented matrix is a GF(2) matrix, i.e. the elements are
-either zeros or ones and the add operation is represented by XOR. The augmented matrix is converted
-to its RREF representation in `gf2_rref` module, then `enumerate_solutions` takes over to build up
-the null bases over free variables and iterates over the possible solutions. `configure_machine`
-module orchestrates these two modules and tracks the solution involving minimum number of button
-presses.
+target arrangement of the lights. The augmented matrix is a
+[GF(2)](https://en.wikipedia.org/wiki/GF(2)) matrix, i.e. the elements are either zeros or ones and
+the add operation is represented by XOR. The augmented matrix is converted to its RREF
+representation in [`gf2_rref`](src/gf2_rref.sv) module, then
+[`enumerate_solutions`](src/enumerate_solutions.sv) takes over to build up the null bases over free
+variables and iterates over the possible solutions.
+[`configure_machine`](src/configure_machine.sv) module orchestrates
+these two modules and tracks the solution involving minimum number of button presses.
 
-On the top level, `day10` module deals with parsing the AXI input from the controller into
-structured data via `day10_input_reader`, which is then passed to `configure_machine`, and then
-structured output data is converted into output AXI stream in `day10_output_writer` to be sent b
-ack to the controller.
+On the top level, [`day10`](src/day10.sv) module deals with parsing the AXI input from the
+[controller](controller/controller.py) into structured data via [`day10_input_reader`](src/day10_input_reader.sv), which is then
+passed to [`configure_machine`](src/configure_machine.sv), and then structured output data is
+converted into output AXI stream in [`day10_output_writer`](src/day10_output_writer.sv) to be sent
+back to the [controller](controller/controller.py).
 
 ### Testing
 
-Major modules `gf2_rref`, `enumerate_solutions` and `configure_machine` have a couple of
-reality-check tests in thier corresponding folder in `tests/`. There is also a single integration
-test that hooks up the controller to the accelerator via Cocotb's AXI extension to confirm the
-overall operation of the system.
+Major modules [`gf2_rref`](src/gf2_rref.sv), [`enumerate_solutions`](src/enumerate_solutions.sv) and
+[`configure_machine`](src/configure_machine.sv) have a couple of reality-check tests in thier
+corresponding folder in [`tests/`](tests). There is also a single integration test that hooks up the
+controller to the accelerator via [Cocotb's AXI
+extension](https://github.com/alexforencich/cocotbext-axi) to confirm the overall operation of the
+system.
 
 ### Scaling
 
 The deisgn's scale is configurable via `MAX_NUM_LIGHTS` and `MAX_NUM_BUTTONS` at instantiation of
-the top level module `day10`. This allows to configure the design for various input data sizes.
-Current limits are upper bound of an 8-bit number, since this is max that current [I/O](#???) setup
-can handle, but can be extended to support larger numbers.
+the top level module [`day10`](src/day10.sv). This allows to configure the design for various input
+data sizes. Current limits are upper bound of an 8-bit number, since this is max that current
+[I/O](#io) setup can handle, but can be extended to support larger numbers.
 
 ### I/O
 
@@ -80,18 +86,20 @@ On the receiving side, the controller receives:
 ### Hardening
 
 To confirm that the design is synthesizable, it has ben hardened for ASIC tape-out via Tiny
-Tapeout's template repository and is available here.
+Tapeout's template repository and is available in this downstream repo:
+https://github.com/TheDeepestSpace/aoc-2025-ttsky.
 
 ### Methodology
 
-For this project I decided to try following SVLint's approach to writing SystemVerilog, which
-entails a lot restrictions when using combinational and sequential logic. For instance, avoiding
-`begin` and `end` keywords within `always_comb` blocks to limit potential for inferred latches, and
-being more explicit with `if` statements. Generally I feel like it made me pay more attention to the
-design process as well as how my code is interpreted by both other people and machines.
+For this project I decided to try following [SVLint](https://github.com/dalance/svlint)'s approach
+to writing SystemVerilog, which entails a lot restrictions when using combinational and sequential
+logic. For instance, avoiding `begin` and `end` keywords within `always_comb` blocks to limit
+potential for inferred latches, and being more explicit with `if` statements. Generally I feel like
+it made me pay more attention to the design process as well as how my code is interpreted by both
+other people and machines.
 
 ### Future improvements
 
-The design is pretty light of optimizations, and lacks thorough testing of edge cases, so in the
+The design is pretty light on optimizations, and lacks thorough testing of edge cases, so in the
 future I would like to pipeline and paralellize the processing (e.g. keep deriving RREFs from
 augmented input matrices while enumerating solutions) and finish testing the edge-cases.
