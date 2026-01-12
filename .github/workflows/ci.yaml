@@ -66,6 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ needs.build_ci_image.outputs.image-primary-tag }}
+      options: --user root
 
     steps:
       - name: Checkout code
