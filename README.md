@@ -65,6 +65,25 @@ $ make test # for unit tests
 $ make test_integration
 ```
 
+Example output from the integration
+test<sup>[1](https://github.com/TheDeepestSpace/aoc-2025/actions/runs/20932831897/job/60147862576#step:6:100)</sup>:
+```
+[machine 1] expected:
+[machine 1] [.##.]
+[machine 1] configuring: (in 2 button presses)
+[machine 1] [....]
+[machine 1] [.#.#]
+[machine 1] [.##.]
+[machine 1] done configuring
+[machine 1] lights match target arrangement: True
+[machine 2] expected:
+[machine 2] [...#.]
+[machine 2] configuring: (in 3 button presses)
+[machine 2] [.....]
+[machine 2] [#...#]
+...
+```
+
 ### Scaling
 
 The deisgn's scale is configurable via `MAX_NUM_LIGHTS` and `MAX_NUM_BUTTONS` at instantiation of
