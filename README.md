@@ -57,6 +57,12 @@ controller to the accelerator via [Cocotb's AXI
 extension](https://github.com/alexforencich/cocotbext-axi) to confirm the overall operation of the
 system.
 
+Running the tests:
+```bash
+$ make test # for unit tests
+$ make test_integration
+```
+
 ### Scaling
 
 The deisgn's scale is configurable via `MAX_NUM_LIGHTS` and `MAX_NUM_BUTTONS` at instantiation of
@@ -97,6 +103,11 @@ logic. For instance, avoiding `begin` and `end` keywords within `always_comb` bl
 potential for inferred latches, and being more explicit with `if` statements. Generally I feel like
 it made me pay more attention to the design process as well as how my code is interpreted by both
 other people and machines.
+
+### Development
+
+This repository contains a [devcontainer](https://containers.dev) [setup](.devcontainer) that
+includes all the necessary tools needed for development and testing, with specific setup for VScode.
 
 ### Future improvements
 
