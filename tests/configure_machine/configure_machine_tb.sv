@@ -21,6 +21,8 @@ module configure_machine_tb;
   day10_input_if  #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input();
   day10_output_if #( MAX_NUM_BUTTONS )                 day10_output();
 
+  logic day10_input_busy;
+
   configure_machine
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
     , .MAX_NUM_BUTTONS ( MAX_NUM_BUTTONS )
@@ -35,6 +37,8 @@ module configure_machine_tb;
 
       , .day10_input               ( day10_input      )
       , .day10_output              ( day10_output     )
+
+      , .day10_input_busy          ( day10_input_busy )
       );
 
 endmodule

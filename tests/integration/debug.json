@@ -1,11 +1,15 @@
 {
-  "extensionVersion": "1.4.4",
+  "extensionVersion": "1.4.7",
   "fileName": "/workspaces/aoc-day12/tests/integration/dump.fst",
-  "markerTime": 633242,
+  "markerTime": 804008,
   "altMarkerTime": null,
-  "selectedSignal": null,
-  "zoomRatio": 0.0128,
-  "scrollLeft": 7666.5,
+  "selectedSignal": {
+    "name": "day10_tb.u_day10.u_last_input_flag_fifo.write_addr",
+    "msb": 1,
+    "lsb": 0
+  },
+  "zoomRatio": 0.002558431057128311,
+  "scrollLeft": 7667,
   "displayedSignals": [
     {
       "dataType": "netlist-variable",
@@ -35,33 +39,7 @@
     },
     {
       "dataType": "netlist-variable",
-      "netlistId": 39,
-      "name": "day10_tb.u_day10.state_next",
-      "numberFormat": "enum",
-      "colorIndex": 0,
-      "rowHeight": 1,
-      "verticalScale": 1,
-      "nameType": "fullPath",
-      "customName": "state_next",
-      "renderType": "multiBit",
-      "valueLinkCommand": ""
-    },
-    {
-      "dataType": "netlist-variable",
-      "netlistId": 38,
-      "name": "day10_tb.u_day10.state_now",
-      "numberFormat": "enum",
-      "colorIndex": 0,
-      "rowHeight": 1,
-      "verticalScale": 1,
-      "nameType": "fullPath",
-      "customName": "state_now",
-      "renderType": "multiBit",
-      "valueLinkCommand": ""
-    },
-    {
-      "dataType": "netlist-variable",
-      "netlistId": 40,
+      "netlistId": 42,
       "name": "day10_tb.u_day10.input_read_start",
       "numberFormat": "binary",
       "colorIndex": 0,
@@ -74,7 +52,7 @@
     },
     {
       "dataType": "netlist-variable",
-      "netlistId": 41,
+      "netlistId": 43,
       "name": "day10_tb.u_day10.input_read_complete",
       "numberFormat": "binary",
       "colorIndex": 0,
@@ -118,7 +96,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 395,
+          "netlistId": 494,
           "name": "day10_tb.u_day10.u_day10_input_reader.end_of_input",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -164,7 +142,7 @@
       "children": [
         {
           "dataType": "netlist-variable",
-          "netlistId": 401,
+          "netlistId": 500,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.num_buttons",
           "numberFormat": "hexadecimal",
           "colorIndex": 0,
@@ -177,7 +155,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 400,
+          "netlistId": 499,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.num_lights",
           "numberFormat": "hexadecimal",
           "colorIndex": 0,
@@ -190,7 +168,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 409,
+          "netlistId": 508,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.target_lights_arrangement",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -203,7 +181,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 402,
+          "netlistId": 501,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[0]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -216,7 +194,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 403,
+          "netlistId": 502,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[1]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -229,7 +207,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 404,
+          "netlistId": 503,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[2]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -242,7 +220,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 405,
+          "netlistId": 504,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[3]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -255,7 +233,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 406,
+          "netlistId": 505,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[4]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -268,7 +246,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 407,
+          "netlistId": 506,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[5]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -281,7 +259,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 408,
+          "netlistId": 507,
           "name": "day10_tb.u_day10.u_day10_input_reader.day10_input.buttons.[6]",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -301,7 +279,7 @@
       "children": [
         {
           "dataType": "netlist-variable",
-          "netlistId": 411,
+          "netlistId": 510,
           "name": "day10_tb.u_day10.u_day10_input_reader.state_next",
           "numberFormat": "enum",
           "colorIndex": 0,
@@ -314,7 +292,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 410,
+          "netlistId": 509,
           "name": "day10_tb.u_day10.u_day10_input_reader.state_now",
           "numberFormat": "enum",
           "colorIndex": 0,
@@ -327,7 +305,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 422,
+          "netlistId": 521,
           "name": "day10_tb.u_day10.u_day10_input_reader.light_count_read_completed",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -340,7 +318,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 429,
+          "netlistId": 530,
           "name": "day10_tb.u_day10.u_day10_input_reader.button_iter",
           "numberFormat": "hexadecimal",
           "colorIndex": 0,
@@ -358,7 +336,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 467,
+              "netlistId": 573,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_target_lights_arrengement.state_next",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -371,7 +349,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 466,
+              "netlistId": 572,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_target_lights_arrengement.state_now",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -384,7 +362,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 465,
+              "netlistId": 571,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_target_lights_arrengement.vec",
               "numberFormat": "hexadecimal",
               "colorIndex": 0,
@@ -397,7 +375,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 464,
+              "netlistId": 569,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_target_lights_arrengement.ready",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -410,7 +388,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 457,
+              "netlistId": 562,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_target_lights_arrengement.start",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -430,7 +408,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 440,
+              "netlistId": 543,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.data_in.tdata",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -443,7 +421,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 441,
+              "netlistId": 544,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.data_in.tlast",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -456,7 +434,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 439,
+              "netlistId": 542,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.data_in.tready",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -469,7 +447,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 438,
+              "netlistId": 541,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.data_in.tvalid",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -482,7 +460,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 445,
+              "netlistId": 549,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.state_next",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -495,7 +473,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 444,
+              "netlistId": 548,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.state_now",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -508,7 +486,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 449,
+              "netlistId": 553,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.vec_padded",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -521,7 +499,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 435,
+              "netlistId": 538,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.start",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -534,7 +512,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 442,
+              "netlistId": 545,
               "name": "day10_tb.u_day10.u_day10_input_reader.u_axi_read_button.ready",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -547,7 +525,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 63,
+              "netlistId": 81,
               "name": "day10_tb.u_day10.configure_machine_complete",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -560,7 +538,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 62,
+              "netlistId": 80,
               "name": "day10_tb.u_day10.configure_machine_start",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -582,33 +560,7 @@
       "children": [
         {
           "dataType": "netlist-variable",
-          "netlistId": 96,
-          "name": "day10_tb.u_day10.u_configure_machine.state_next",
-          "numberFormat": "enum",
-          "colorIndex": 0,
-          "rowHeight": 1,
-          "verticalScale": 1,
-          "nameType": "fullPath",
-          "customName": "state_next",
-          "renderType": "multiBit",
-          "valueLinkCommand": ""
-        },
-        {
-          "dataType": "netlist-variable",
-          "netlistId": 95,
-          "name": "day10_tb.u_day10.u_configure_machine.state_now",
-          "numberFormat": "enum",
-          "colorIndex": 0,
-          "rowHeight": 1,
-          "verticalScale": 1,
-          "nameType": "fullPath",
-          "customName": "state_now",
-          "renderType": "multiBit",
-          "valueLinkCommand": ""
-        },
-        {
-          "dataType": "netlist-variable",
-          "netlistId": 73,
+          "netlistId": 92,
           "name": "day10_tb.u_day10.u_configure_machine.start",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -626,7 +578,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 100,
+              "netlistId": 124,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[0]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -639,7 +591,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 101,
+              "netlistId": 125,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[1]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -652,7 +604,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 102,
+              "netlistId": 126,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[2]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -665,7 +617,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 103,
+              "netlistId": 127,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[3]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -678,7 +630,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 104,
+              "netlistId": 128,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[4]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -691,7 +643,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 105,
+              "netlistId": 129,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[5]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -704,7 +656,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 106,
+              "netlistId": 130,
               "name": "day10_tb.u_day10.u_configure_machine.augmented_matrix.[6]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -724,7 +676,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 108,
+              "netlistId": 133,
               "name": "day10_tb.u_day10.u_configure_machine.rref_ready",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -737,7 +689,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 336,
+              "netlistId": 435,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.state_next",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -750,7 +702,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 335,
+              "netlistId": 434,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.state_now",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -763,7 +715,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 319,
+              "netlistId": 418,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.start",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -776,7 +728,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 317,
+              "netlistId": 416,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.rows",
               "numberFormat": "hexadecimal",
               "colorIndex": 0,
@@ -789,7 +741,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 318,
+              "netlistId": 417,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.cols",
               "numberFormat": "hexadecimal",
               "colorIndex": 0,
@@ -809,7 +761,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 328,
+              "netlistId": 427,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[0]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -822,7 +774,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 329,
+              "netlistId": 428,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[1]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -835,7 +787,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 330,
+              "netlistId": 429,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[2]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -848,7 +800,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 331,
+              "netlistId": 430,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[3]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -861,7 +813,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 332,
+              "netlistId": 431,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[4]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -874,7 +826,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 333,
+              "netlistId": 432,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[5]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -887,7 +839,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 334,
+              "netlistId": 433,
               "name": "day10_tb.u_day10.u_configure_machine.u_gf2_rref.RREF.[6]",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -907,7 +859,7 @@
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 143,
+              "netlistId": 205,
               "name": "day10_tb.u_day10.u_configure_machine.u_enumerate_solutions.solution_stream.tdata",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -920,7 +872,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 180,
+              "netlistId": 242,
               "name": "day10_tb.u_day10.u_configure_machine.u_enumerate_solutions.free_vars_count",
               "numberFormat": "hexadecimal",
               "colorIndex": 0,
@@ -933,7 +885,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 144,
+              "netlistId": 206,
               "name": "day10_tb.u_day10.u_configure_machine.u_enumerate_solutions.solution_stream.tlast",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -946,7 +898,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 142,
+              "netlistId": 204,
               "name": "day10_tb.u_day10.u_configure_machine.u_enumerate_solutions.solution_stream.tready",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -959,7 +911,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 141,
+              "netlistId": 203,
               "name": "day10_tb.u_day10.u_configure_machine.u_enumerate_solutions.solution_stream.tvalid",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -974,7 +926,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 122,
+          "netlistId": 159,
           "name": "day10_tb.u_day10.u_configure_machine.current_solution",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -987,7 +939,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 123,
+          "netlistId": 160,
           "name": "day10_tb.u_day10.u_configure_machine.current_solution_popcount",
           "numberFormat": "hexadecimal",
           "colorIndex": 0,
@@ -1000,7 +952,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 74,
+          "netlistId": 93,
           "name": "day10_tb.u_day10.u_configure_machine.ready",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1013,7 +965,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 61,
+          "netlistId": 79,
           "name": "day10_tb.u_day10.day10_output_if.buttons_to_press",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1026,7 +978,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 60,
+          "netlistId": 78,
           "name": "day10_tb.u_day10.day10_output_if.min_button_presses",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1101,11 +1053,11 @@
     {
       "dataType": "signal-group",
       "groupName": "output writer",
-      "collapseState": 1,
+      "collapseState": 2,
       "children": [
         {
           "dataType": "netlist-variable",
-          "netlistId": 507,
+          "netlistId": 613,
           "name": "day10_tb.u_day10.u_day10_output_writer.state_next",
           "numberFormat": "enum",
           "colorIndex": 0,
@@ -1118,7 +1070,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 506,
+          "netlistId": 612,
           "name": "day10_tb.u_day10.u_day10_output_writer.state_now",
           "numberFormat": "enum",
           "colorIndex": 0,
@@ -1131,7 +1083,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 514,
+          "netlistId": 620,
           "name": "day10_tb.u_day10.u_day10_output_writer.buttons_to_press_write_start",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1144,7 +1096,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 515,
+          "netlistId": 621,
           "name": "day10_tb.u_day10.u_day10_output_writer.buttons_to_press_write_complete",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1157,7 +1109,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 513,
+          "netlistId": 619,
           "name": "day10_tb.u_day10.u_day10_output_writer.min_presses_write_complete",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1170,7 +1122,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 500,
+          "netlistId": 606,
           "name": "day10_tb.u_day10.u_day10_output_writer.writer_ready",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1183,12 +1135,136 @@
         },
         {
           "dataType": "signal-group",
-          "groupName": "axi buttons to press writer",
-          "collapseState": 1,
+          "groupName": "last write smuggler",
+          "collapseState": 2,
           "children": [
             {
               "dataType": "netlist-variable",
-              "netlistId": 540,
+              "netlistId": 659,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.count",
+              "numberFormat": "hexadecimal",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "count",
+              "renderType": "multiBit",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 660,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.empty",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "empty",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 661,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.full",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "full",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 654,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.pop",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "pop",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 655,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.pop_data",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "pop_data",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 652,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.push",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "push",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 653,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.push_data",
+              "numberFormat": "binary",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "push_data",
+              "renderType": "binary",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 657,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.read_addr",
+              "numberFormat": "hexadecimal",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "read_addr",
+              "renderType": "multiBit",
+              "valueLinkCommand": ""
+            },
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 658,
+              "name": "day10_tb.u_day10.u_last_input_flag_fifo.write_addr",
+              "numberFormat": "hexadecimal",
+              "colorIndex": 0,
+              "rowHeight": 1,
+              "verticalScale": 1,
+              "nameType": "fullPath",
+              "customName": "write_addr",
+              "renderType": "multiBit",
+              "valueLinkCommand": ""
+            }
+          ]
+        },
+        {
+          "dataType": "signal-group",
+          "groupName": "axi buttons to press writer",
+          "collapseState": 2,
+          "children": [
+            {
+              "dataType": "netlist-variable",
+              "netlistId": 646,
               "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.last_chunk",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -1201,7 +1277,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 537,
+              "netlistId": 643,
               "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.chunk_iter",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -1214,7 +1290,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 539,
+              "netlistId": 645,
               "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.chunk_iter_end",
               "numberFormat": "binary",
               "colorIndex": 0,
@@ -1227,7 +1303,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 532,
+              "netlistId": 638,
               "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.state_next",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -1240,7 +1316,7 @@
             },
             {
               "dataType": "netlist-variable",
-              "netlistId": 531,
+              "netlistId": 637,
               "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.state_now",
               "numberFormat": "enum",
               "colorIndex": 0,
@@ -1255,7 +1331,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 524,
+          "netlistId": 630,
           "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.last_write",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1268,7 +1344,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 529,
+          "netlistId": 635,
           "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.data_out.tdata",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1281,7 +1357,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 530,
+          "netlistId": 636,
           "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.data_out.tlast",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1294,7 +1370,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 528,
+          "netlistId": 634,
           "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.data_out.tready",
           "numberFormat": "binary",
           "colorIndex": 0,
@@ -1307,7 +1383,7 @@
         },
         {
           "dataType": "netlist-variable",
-          "netlistId": 527,
+          "netlistId": 633,
           "name": "day10_tb.u_day10.u_day10_output_writer.u_axi_write_buttons_to_press.data_out.tvalid",
           "numberFormat": "binary",
           "colorIndex": 0,

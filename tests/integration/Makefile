@@ -10,6 +10,7 @@ VERILOG_SOURCES += $(CURDIR)/../../src/axi_stream_if.svh \
                    $(CURDIR)/../../src/day10_output_writer.sv \
                    $(CURDIR)/../../src/axi_read_vector.sv \
                    $(CURDIR)/../../src/axi_write_vector.sv \
+                   $(CURDIR)/../../src/flag_fifo.sv \
                    $(CURDIR)/../../src/popcount.sv \
                    $(CURDIR)/../../src/popcount_chain.sv \
                    $(CURDIR)/../../src/enumerate_solutions.sv \

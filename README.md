@@ -50,6 +50,13 @@ passed to [`configure_machine`](src/configure_machine.sv), and then structured o
 converted into output AXI stream in [`day10_output_writer`](src/day10_output_writer.sv) to be sent
 back to the [controller](controller/controller.py).
 
+### Optimization
+
+The accelerator design pipelines input capture, RREF process, solution enumetation, and writeout as
+highlighted with respect to the main FSM waveforms below:
+
+![pipelining as seen on waveforms](day10-pipeline.png)
+
 ### Testing
 
 Major modules [`gf2_rref`](src/gf2_rref.sv), [`enumerate_solutions`](src/enumerate_solutions.sv) and
@@ -133,5 +140,4 @@ includes all the necessary tools needed for development and testing, with specif
 ### Future improvements
 
 The design is pretty light on optimizations, and lacks thorough testing of edge cases, so in the
-future I would like to pipeline and paralellize the processing (e.g. keep deriving RREFs from
-augmented input matrices while enumerating solutions) and finish testing the edge-cases.
+future I would like to paralellize the processingand finish testing the edge-cases.

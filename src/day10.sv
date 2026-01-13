@@ -12,24 +12,35 @@ module day10
   , axi_stream_if.master data_out
   );
 
-  // state declaration
+  // state declarations
 
   typedef enum logic [2:0]
-    { STATE__INIT
-    , STATE__READ_INPUT
-    , STATE__WAIT_READ_INPUT
-    , STATE__CONFIGURE_MACHINE
-    , STATE__WAIT_CONFIGURE_MACHINE
-    , STATE__WRITE_OUTPUT
-    , STATE__WAIT_WRITE_OUTPUT
-    , STATE__DONE
-    } state_t;
+    { INPUT_STAGE_STATE__INIT
+    , INPUT_STAGE_STATE__READ
+    , INPUT_STAGE_STATE__WAIT_READ
+    , INPUT_STAGE_STATE__STORE
+    , INPUT_STAGE_STATE__NOTIFY_STORED
+    , INPUT_STAGE_STATE__DONE
+    } input_stage_state_t;
 
-  state_t state_now, state_next;
+  typedef enum logic [2:0]
+    { OUTPUT_STAGE_STATE__INIT
+    , OUTPUT_STAGE_STATE__LOAD
+    , OUTPUT_STAGE_STATE__WRITE
+    , OUTPUT_STAGE_STATE__WAIT_WRITE
+    , OUTPUT_STAGE_STATE__DONE
+    } output_stage_state_t;
+
+  input_stage_state_t  input_stage_state_now, input_stage_state_next;
+  output_stage_state_t output_stage_state_now, output_stage_state_next;
 
   always_ff @ (posedge clk)
-    if (!rst_n) state_now <= STATE__INIT;
-    else        state_now <= state_next;
+    if (!rst_n) input_stage_state_now <= INPUT_STAGE_STATE__INIT;
+    else        input_stage_state_now <= input_stage_state_next;
+
+  always_ff @ (posedge clk)
+    if (!rst_n) output_stage_state_now <= OUTPUT_STAGE_STATE__INIT;
+    else        output_stage_state_now <= output_stage_state_next;
 
   // reading input
 
@@ -39,7 +50,7 @@ module day10
 
   day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_input_if();
 
-  assign input_read_start = state_now == STATE__READ_INPUT;
+  assign input_read_start = input_stage_state_now == INPUT_STAGE_STATE__READ;
 
   day10_input_reader
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
@@ -56,6 +67,38 @@ module day10
       , .day10_input  ( day10_input_if      )
       );
 
+  // store input
+
+  day10_input_if #( MAX_NUM_LIGHTS, MAX_NUM_BUTTONS ) day10_stored_input_if();
+  logic input_storage_busy;
+
+  // TODO: turn day10_input into a struct
+  always_ff @ (posedge clk)
+    if (input_stage_state_now == INPUT_STAGE_STATE__STORE) begin
+      if (!input_storage_busy) begin
+        day10_stored_input_if.num_lights                <= day10_input_if.num_lights;
+        day10_stored_input_if.num_buttons               <= day10_input_if.num_buttons;
+        day10_stored_input_if.buttons                   <= day10_input_if.buttons;
+        day10_stored_input_if.target_lights_arrangement <= day10_input_if.target_lights_arrangement;
+      end
+    end
+
+  // last read/write flag smuggling
+
+  logic last_write;
+
+  flag_fifo #( .DEPTH ( 4 ) )
+    u_last_input_flag_fifo
+      ( .clk       (  clk )
+      , .rst_n     ( rst_n )
+
+      , .push      ( !input_storage_busy && input_stage_state_now == INPUT_STAGE_STATE__STORE )
+      , .push_data ( last_input                                                               )
+
+      , .pop      ( output_stage_state_now == OUTPUT_STAGE_STATE__WRITE )
+      , .pop_data ( last_write                                          )
+      );
+
   // configure machine logic
 
   day10_output_if #( MAX_NUM_BUTTONS ) day10_output_if();
@@ -63,7 +106,7 @@ module day10
   logic configure_machine_start;
   logic configure_machine_complete;
 
-  always_comb configure_machine_start = state_now == STATE__CONFIGURE_MACHINE;
+  always_comb configure_machine_start = input_stage_state_now == INPUT_STAGE_STATE__NOTIFY_STORED;
 
   configure_machine
     #(.MAX_NUM_LIGHTS  ( MAX_NUM_LIGHTS  )
@@ -71,13 +114,14 @@ module day10
     , .AXI_DATA_WIDTH  ( AXI_DATA_WIDTH  )
     )
     u_configure_machine
-      ( .clk          ( clk                        )
-      , .rst_n        ( rst_n                      )
-      , .start        ( configure_machine_start    )
-      , .ready        ( configure_machine_complete )
-      , .accepted     ( output_write_complete      )
-      , .day10_input  ( day10_input_if             )
-      , .day10_output ( day10_output_if            )
+      ( .clk              ( clk                        )
+      , .rst_n            ( rst_n                      )
+      , .start            ( configure_machine_start    )
+      , .ready            ( configure_machine_complete )
+      , .accepted         ( output_write_complete      )
+      , .day10_input      ( day10_stored_input_if      )
+      , .day10_output     ( day10_output_if            )
+      , .day10_input_busy ( input_storage_busy         )
       );
 
   // writing output
@@ -85,7 +129,7 @@ module day10
   logic output_write_start;
   logic output_write_complete;
 
-  assign output_write_start = state_now == STATE__WRITE_OUTPUT;
+  assign output_write_start = output_stage_state_now == OUTPUT_STAGE_STATE__WRITE;
 
   day10_output_writer #( .MAX_NUM_BUTTONS ( MAX_NUM_BUTTONS ), .AXI_DATA_WIDTH ( AXI_DATA_WIDTH ) )
     u_day10_output_writer
@@ -95,30 +139,43 @@ module day10
       , .day10_input  ( day10_input_if        )
       , .day10_output ( day10_output_if       )
       , .start        ( output_write_start    )
-      , .last_write   ( last_input            )
+      , .last_write   ( last_write            )
       , .writer_ready ( output_write_complete )
 
       , .data_out     ( data_out              )
       );
 
-  // state machine logic
+  // state machines' logics
 
   always_comb
-    case (state_now)
-      STATE__INIT:                      state_next = STATE__READ_INPUT;
-      STATE__READ_INPUT, STATE__WAIT_READ_INPUT:
-        if (input_read_complete)        state_next = STATE__CONFIGURE_MACHINE;
-        else                            state_next = STATE__WAIT_READ_INPUT;
-      STATE__CONFIGURE_MACHINE, STATE__WAIT_CONFIGURE_MACHINE:
-        if (configure_machine_complete) state_next = STATE__WRITE_OUTPUT;
-        else                            state_next = STATE__WAIT_CONFIGURE_MACHINE;
-      STATE__WRITE_OUTPUT, STATE__WAIT_WRITE_OUTPUT:
+    case (input_stage_state_now)
+      INPUT_STAGE_STATE__INIT:   input_stage_state_next = INPUT_STAGE_STATE__READ;
+      INPUT_STAGE_STATE__READ, INPUT_STAGE_STATE__WAIT_READ:
+        if (input_read_complete) input_stage_state_next = INPUT_STAGE_STATE__STORE;
+        else                     input_stage_state_next = INPUT_STAGE_STATE__WAIT_READ;
+      INPUT_STAGE_STATE__STORE:
+        if (input_storage_busy)  input_stage_state_next = INPUT_STAGE_STATE__STORE;
+        else                     input_stage_state_next = INPUT_STAGE_STATE__NOTIFY_STORED;
+      INPUT_STAGE_STATE__NOTIFY_STORED:
+        if (last_input)          input_stage_state_next = INPUT_STAGE_STATE__DONE;
+        else                     input_stage_state_next = INPUT_STAGE_STATE__READ;
+      INPUT_STAGE_STATE__DONE:   input_stage_state_next = INPUT_STAGE_STATE__DONE;
+      default:                   input_stage_state_next = INPUT_STAGE_STATE__INIT;
+    endcase
+
+  always_comb
+    case (output_stage_state_now)
+      OUTPUT_STAGE_STATE__INIT:         output_stage_state_next = OUTPUT_STAGE_STATE__LOAD;
+      OUTPUT_STAGE_STATE__LOAD:
+        if (configure_machine_complete) output_stage_state_next = OUTPUT_STAGE_STATE__WRITE;
+        else                            output_stage_state_next = OUTPUT_STAGE_STATE__LOAD;
+      OUTPUT_STAGE_STATE__WRITE, OUTPUT_STAGE_STATE__WAIT_WRITE:
         if (output_write_complete)
-          if (last_input)               state_next = STATE__DONE;
-          else                          state_next = STATE__READ_INPUT;
-        else                            state_next = STATE__WAIT_WRITE_OUTPUT;
-      STATE__DONE:                      state_next = STATE__DONE;
-      default:                          state_next = STATE__INIT;
+          if (last_write)               output_stage_state_next = OUTPUT_STAGE_STATE__DONE;
+          else                          output_stage_state_next = OUTPUT_STAGE_STATE__LOAD;
+        else                            output_stage_state_next = OUTPUT_STAGE_STATE__WAIT_WRITE;
+      OUTPUT_STAGE_STATE__DONE:         output_stage_state_next = OUTPUT_STAGE_STATE__DONE;
+      default:                          output_stage_state_next = OUTPUT_STAGE_STATE__INIT;
     endcase
 
 endmodule

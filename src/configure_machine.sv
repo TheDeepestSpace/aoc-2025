@@ -21,6 +21,8 @@ module configure_machine
 
   , day10_input_if.consumer  day10_input
   , day10_output_if.producer day10_output
+
+  , output var logic day10_input_busy
   );
 
   // state declarations
@@ -53,6 +55,34 @@ module configure_machine
   always_ff @ (posedge clk)
     if (!rst_n) enum_stage_state_now <= ENUM_STAGE_STATE__INIT;
     else        enum_stage_state_now <= enum_stage_state_next;
+
+  // input busyness indicator
+
+  always_ff @ (posedge clk)
+    if (!rst_n)                               day10_input_busy <= '0;
+    else
+      case (rref_stage_state_now)
+        RREF_STAGE_STATE__INIT:               day10_input_busy <= '0;
+        RREF_STAGE_STATE__START_COMPUTE_RREF: day10_input_busy <= 1'b1;
+        RREF_STAGE_STATE__DONE:               day10_input_busy <= '0;
+        default:                              day10_input_busy <= day10_input_busy;
+      endcase
+
+  // save day10 data used by enum stage
+
+  logic [MAX_NUM_LIGHTS_W -1:0]  num_lights;
+  logic [MAX_NUM_BUTTONS_W -1:0] num_buttons;
+
+  always_ff @ (posedge clk)
+    if (!rst_n)
+      {num_lights, num_buttons} <= '0;
+    else
+      case (rref_stage_state_now)
+        RREF_STAGE_STATE__DONE:
+          {num_lights, num_buttons} <= {day10_input.num_lights, day10_input.num_buttons};
+        default:
+          {num_lights, num_buttons} <= {num_lights, num_buttons};
+      endcase
 
   // construct augmented matrix
 
@@ -146,6 +176,7 @@ module configure_machine
         default:                stored_rref <= stored_rref;
       endcase
 
+  // TODO: remove dead signal
   always_ff @ (posedge clk)
     if (!rst_n) stored_rref_complete <= '0;
     else
@@ -176,16 +207,16 @@ module configure_machine
     , .AXI_DATA_WIDTH ( AXI_DATA_WIDTH   )
     )
     u_enumerate_solutions
-      ( .clk             ( clk                         )
-      , .rst_n           ( rst_n                       )
+      ( .clk             ( clk                       )
+      , .rst_n           ( rst_n                     )
 
-      , .rows            ( day10_input.num_lights      )
-      , .cols            ( day10_input.num_buttons + 1 )
+      , .rows            ( num_lights                )
+      , .cols            ( num_buttons + 1           )
 
-      , .start           ( enumerate_solutions_start   )
-      , .RREF            ( rref                        )
+      , .start           ( enumerate_solutions_start )
+      , .RREF            ( rref                      )
 
-      , .solution_stream ( solution_stream.master      )
+      , .solution_stream ( solution_stream.master    )
       );
 
   // read next solution
@@ -208,7 +239,7 @@ module configure_machine
       , .rst_n      ( rst_n                   )
 
       , .start      ( solution_read_start     )
-      , .vec_length ( day10_input.num_buttons )
+      , .vec_length ( num_buttons             )
       , .data_in    ( solution_stream.slave   )
 
       , .ready      ( solution_read_complete  )
@@ -226,7 +257,7 @@ module configure_machine
     )
     u_solution_popcount
       ( .in    ( current_solution          )
-      , .n     ( day10_input.num_buttons   )
+      , .n     ( num_buttons               )
       , .count ( current_solution_popcount )
       );
 
@@ -249,8 +280,13 @@ module configure_machine
   // completion check
 
   always_ff @ (posedge clk)
-    if (enum_stage_state_now == ENUM_STAGE_STATE__DONE) ready <= 1'b1;
-    else                                                ready <= '0;
+    if (!rst_n)                                  ready <= '0;
+    else
+      case (enum_stage_state_now)
+        ENUM_STAGE_STATE__INIT:                  ready <= '0;
+        ENUM_STAGE_STATE__PROCESS_LAST_SOLUTION: ready <= 1'b1;
+        default:                                 ready <= '0;
+      endcase
 
   // state machine logic
 
