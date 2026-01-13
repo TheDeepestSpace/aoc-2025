@@ -3,7 +3,7 @@
 ## Advent of Code 2025 -- Day 10 solution
 
 This repo contains SystemVerilog implementation for [Day 10 of Advent of Code
-2025](https://adventofcode.com/2025/day/10). It is implemented as an acceperator, with structured
+2025](https://adventofcode.com/2025/day/10). It is implemented as an accelerator, with structured
 input fed from a controller. High-level architecture is as follows:
 
 ```mermaid
@@ -34,7 +34,7 @@ flowchart TB
 ```
 
 The crux of the problem is representing the input buttons as an augmented matrix of binary elements
-with columns being "buttons" (or, rather, thier effect on the lights of the machine), RHS being the
+with columns being "buttons" (or, rather, their effect on the lights of the machine), RHS being the
 target arrangement of the lights. The augmented matrix is a
 [GF(2)](https://en.wikipedia.org/wiki/GF(2)) matrix, i.e. the elements are either zeros or ones and
 the add operation is represented by XOR. The augmented matrix is converted to its RREF
@@ -52,7 +52,7 @@ back to the [controller](controller/controller.py).
 
 ### Optimization
 
-The accelerator design pipelines input capture, RREF process, solution enumetation, and writeout as
+The accelerator design pipelines input capture, RREF process, solution enumeration, and writeout as
 highlighted with respect to the main FSM waveforms below:
 
 ![pipelining as seen on waveforms](day10-pipeline.png)
@@ -60,7 +60,7 @@ highlighted with respect to the main FSM waveforms below:
 ### Testing
 
 Major modules [`gf2_rref`](src/gf2_rref.sv), [`enumerate_solutions`](src/enumerate_solutions.sv) and
-[`configure_machine`](src/configure_machine.sv) have a couple of reality-check tests in thier
+[`configure_machine`](src/configure_machine.sv) have a couple of reality-check tests in their
 corresponding folder in [`tests/`](tests). There is also a single integration test that hooks up the
 controller to the accelerator via [Cocotb's AXI
 extension](https://github.com/alexforencich/cocotbext-axi) to confirm the overall operation of the
@@ -93,7 +93,7 @@ test<sup>[1](https://github.com/TheDeepestSpace/aoc-2025/actions/runs/2093283189
 
 ### Scaling
 
-The deisgn's scale is configurable via `MAX_NUM_LIGHTS` and `MAX_NUM_BUTTONS` at instantiation of
+The design's scale is configurable via `MAX_NUM_LIGHTS` and `MAX_NUM_BUTTONS` at instantiation of
 the top level module [`day10`](src/day10.sv). This allows to configure the design for various input
 data sizes. Current limits are upper bound of an 8-bit number, since this is max that current
 [I/O](#io) setup can handle, but can be extended to support larger numbers.
@@ -111,17 +111,20 @@ parsed data to the accelerator. For each input controller sends:
 
 On the receiving side, the controller receives:
 * 8-bit unsigned number representing minimum number of buttons to press for a given machine
-* `M` bit corresponding to the mask of buttons that need to be pressed in order to achive the target
-  arrangement, where `M` corresponds to the number of buttons for that machine (since processing is
-  currently sequential, the controller knows that the machine it last sent the data of is the one
-  its reading the data for); this data is used to display an ASCII representation of the
+* `M` bit corresponding to the mask of buttons that need to be pressed in order to achieve the
+  target arrangement, where `M` corresponds to the number of buttons for that machine (since
+  processing is currently sequential, the controller knows that the machine it last sent the data of
+  is the one its reading the data for); this data is used to display an ASCII representation of the
   configuration process for each machine
+
+RTL extracts structued [`day10_input_if`](src/day10_input_if.svh)s form the corresponding fields
+rather than interpreting textual syntax.
 
 ### Hardening
 
-To confirm that the design is synthesizable, it has ben hardened for ASIC tape-out via Tiny
-Tapeout's template repository and is available in this downstream repo:
-https://github.com/TheDeepestSpace/aoc-2025-ttsky.
+To confirm that the design is synthesizable, it has been hardened for ASIC tape-out via Tiny
+Tapeout's template repository and is available in this downstream repo: https://github.com/TheDeepestSpace/aoc-2025-ttsky.
+
 
 ### Methodology
 
@@ -137,7 +140,16 @@ other people and machines.
 This repository contains a [devcontainer](https://containers.dev) [setup](.devcontainer) that
 includes all the necessary tools needed for development and testing, with specific setup for VScode.
 
+Debugging profiles for [VaporView](https://github.com/Lramseyer/vaporview) has also been checked
+into version control.
+
 ### Future improvements
 
-The design is pretty light on optimizations, and lacks thorough testing of edge cases, so in the
-future I would like to paralellize the processingand finish testing the edge-cases.
+The current design prioritizes architectural clarity over aggressive optimization. Future work could explore:
+* more aggressive pipelining for higher throughput
+* parallelizing processing to provide another dimension for scaling
+* adding SystemVerilog assertions to enforce internal invariants and external protocol compliance
+* expansion of test coverage to include additional edge cases (e.g. no-solution, maximum-dimensions
+  inputs)
+* implementation of error handling on the accelerator side to detect and handle incorrectly
+  structured inputs
