@@ -153,3 +153,8 @@ The current design prioritizes architectural clarity over aggressive optimizatio
   inputs)
 * implementation of error handling on the accelerator side to detect and handle incorrectly
   structured inputs
+
+### Related work
+
+Checkout my solution for Day 1 written in Hardcaml:
+https://github.com/TheDeepestSpace/aoc-2025-hardcaml
